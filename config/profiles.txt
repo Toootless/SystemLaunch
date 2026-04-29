@@ -1,0 +1,80 @@
+# Webpage Launcher Profile Configuration
+# 
+# SYSTEM MONITORS & LAYOUTS:
+# Monitor 1 → DISPLAY6 - 3840x1620 [Split Left-Right]: 2 sections for unlimited tabs each
+# Monitor 2 → DISPLAY7 - 3840x2160 [Grid 2x3]: 6 sections for unlimited tabs each
+# Monitor 3 → DISPLAY1 - 5760x3240 [Full Screen]: Unlimited chrome tabs
+# Monitor 4 → DISPLAY2 - 5760x3240 [Full Screen]: Unlimited chrome tabs
+# Monitor 5 → DISPLAY3 - 7680x2160 [Chrome Groups Left-Right]: 2 sections for chrome groups
+#
+# Physical Layout:
+#     Monitor1       Monitor3
+#  Monitor5  Monitor2  Monitor4
+#
+# FORMAT: monitor,position,location_id,app_type,target
+# 
+# monitor: 1-5 (monitor number, see mapping above)
+# position: Entry sequence number (1, 2, 3, ...). Unlimited entries per monitor.
+# location_id: Visual location - determines where to position the window:
+#   Monitor 1 (left-right): left, right
+#   Monitor 2 (2x3 grid): top-left, top-center, top-right, bottom-left, bottom-center, bottom-right
+#   Monitor 3 (full): center
+#   Monitor 4 (full): center
+#   Monitor 5 (groups): left, right
+# app_type: 'chrome' for browser tabs or 'program' for executables
+# target: URL for chrome, or executable path for programs
+# NOTE: For full-screen monitors (3, 4), all tabs will open at full resolution. 
+#       For split/grid monitors, location_id determines which section the window opens in.
+#
+# Example entries (unlimited per monitor):
+# Monitor 1 (left-right split):
+# 1,1,left,chrome,https://www.google.com
+# 1,2,right,chrome,https://www.github.com
+# 1,3,left,chrome,https://www.example.com  # Another tab in left section
+#
+# Monitor 2 (2x3 grid):
+# 2,1,top-left,chrome,https://www.google.com
+# 2,2,top-center,chrome,https://www.github.com
+# 2,3,top-right,chrome,https://www.youtube.com
+#
+# Monitor 3 (full screen):
+# 3,1,center,chrome,https://www.example.com
+# 3,2,center,chrome,https://www.google.com  # Multiple tabs for same monitor
+#
+# Monitor 5 (chrome groups left-right):
+# 5,1,left,chrome,https://mail.google.com
+# 5,2,right,chrome,https://calendar.google.com
+
+# Monitor 1 → DISPLAY6 (Left-Right Split)
+1,1,left,program,Ollma
+1,2,left,program,Bambu Studio.exe
+1,3,right,program,Visual Studio Code.exe
+
+
+# Monitor 2 → DISPLAY7 (2x3 Grid)
+2,1,top-left,chrome,https://www.mydlink.com/singleView?no=53708489&model=DCS-8526LH
+2,2,top-center,chrome,https://www.mydlink.com/singleView?no=53708489&model=DCS-8526LH
+2,3,top-right,chrome,https://www.mydlink.com/singleView?no=50539785&model=DCS-8630LH
+2,4,bottom-left,chrome,https://www.mydlink.com/singleView?no=50539785&model=DCS-8630LH
+2,5,bottom-center,chrome,https://www.mydlink.com/singleView?no=50539785&model=DCS-8630LH
+2,6,bottom-right,chrome,https://www.mydlink.com/singleView?no=50539785&model=DCS-8630LH
+
+# Monitor 3 → DISPLAY1 (Full Screen)
+3,1,center,chrome,http://10.0.0.251:8080/
+3,2,center,chrome,https://www.flightradar24.com/42.39,-84.19/9
+3,3,center,chrome,https://www.google.com/finance/?authuser=0
+3,4,center,chrome,https://open.spotify.com/
+3,5,center,chrome,https://www.wunderground.com/
+
+# Monitor 4 → DISPLAY2 (Full Screen)
+4,1,center,chrome,https://www.xda-developers.com/
+4,2,center,chrome,https://www.dishanywhere.com/guide
+4,3,center,chrome,https://www.youtube.com/
+
+# Monitor 5 → DISPLAY3 (Chrome Groups Left-Right)
+5,1,left,chrome,https://mail.google.com/mail/u/0/?ogbl#inbox
+5,2,left,chrome,https://messages.google.com/web/conversations
+5,3,left,chrome,https://www.detroitnews.com/
+5,4,right,chrome,https://gemini.google.com/app
+5,5,right,chrome,https://calendar.google.com/calendar/u/0/r
+5,6,right,chrome,https://www.facebook.com/messages

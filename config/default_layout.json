@@ -1,0 +1,43 @@
+{
+  "layouts": {
+    "default": {
+      "monitor_1": {
+        "name": "Primary Monitor",
+        "position": 0,
+        "fields": 6,
+        "layout_type": "grid_3x2"
+      },
+      "monitor_2": {
+        "name": "Secondary Monitor",
+        "position": 1,
+        "fields": 2,
+        "layout_type": "vertical"
+      },
+      "monitor_3": {
+        "name": "Tertiary Monitor",
+        "position": 2,
+        "fields": 2,
+        "layout_type": "vertical"
+      },
+      "monitor_4": {
+        "name": "Fourth Monitor",
+        "position": 3,
+        "fields": 1,
+        "layout_type": "full"
+      },
+      "monitor_5": {
+        "name": "Fifth Monitor",
+        "position": 4,
+        "fields": 1,
+        "layout_type": "full"
+      }
+    }
+  },
+  "apps": [
+    {
+      "name": "Chrome",
+      "type": "browser",
+      "executable": "chrome.exe"
+    }
+  ]
+}

@@ -1,0 +1,251 @@
+[11:17:09] ============================================================
+[11:17:09] Webpage Launcher Started
+[11:17:09] ============================================================
+[11:17:13] 
+============================================================
+[11:17:13] Starting to launch 23 applications...
+[11:17:13] ============================================================
+
+[11:17:13] [1/23] Launching PROGRAM: Ollma
+[11:17:13]     Searching for: Ollma
+[11:17:13]     Not in PATH, checking common locations...
+[11:17:13]     [NOT FOUND] anywhere
+[11:17:13]     Tried: Ollma, PATH, Program Files, AppData
+[11:17:13]   [OK] Success
+
+[11:17:13] [2/23] Launching PROGRAM: Bambu Studio.exe
+[11:17:13]     Searching for: Bambu Studio.exe
+[11:17:13]     Not in PATH, checking common locations...
+[11:17:13]     [NOT FOUND] anywhere
+[11:17:13]     Tried: Bambu Studio.exe, PATH, Program Files, AppData
+[11:17:13]   [OK] Success
+
+[11:17:13] [3/23] Launching PROGRAM: Visual Studio Code.exe
+[11:17:13]     Searching for: Visual Studio Code.exe
+[11:17:13]     Not in PATH, checking common locations...
+[11:17:13]     Found at: C:\Users\johnj\AppData\Local\Programs\Microsoft VS Code\Code.exe
+[11:17:14]     Launched via os.startfile()
+[11:17:14]     [LAUNCHED] on Monitor 1 (DISPLAY6), Location right
+[11:17:14]   [OK] Success
+
+[11:17:14] [4/23] Launching CHROME: https://www.mydlink.com/singleView?no=53708489&model=DCS-8526LH
+[11:17:14] Opened Chrome tab on Monitor 2 (DISPLAY7), Location top-left: https://www.mydlink.com/singleView?no=53708489&model=DCS-852...
+[11:17:14]   [OK] Success
+
+[11:17:14] [5/23] Launching CHROME: https://www.mydlink.com/singleView?no=53708489&model=DCS-8526LH
+[11:17:14] Opened Chrome tab on Monitor 2 (DISPLAY7), Location top-center: https://www.mydlink.com/singleView?no=53708489&model=DCS-852...
+[11:17:14]   [OK] Success
+
+[11:17:14] [6/23] Launching CHROME: https://www.mydlink.com/singleView?no=50539785&model=DCS-8630LH
+[11:17:14] Opened Chrome tab on Monitor 2 (DISPLAY7), Location top-right: https://www.mydlink.com/singleView?no=50539785&model=DCS-863...
+[11:17:14]   [OK] Success
+
+[11:17:14] [7/23] Launching CHROME: https://www.mydlink.com/singleView?no=50539785&model=DCS-8630LH
+[11:17:14] Opened Chrome tab on Monitor 2 (DISPLAY7), Location bottom-left: https://www.mydlink.com/singleView?no=50539785&model=DCS-863...
+[11:17:14]   [OK] Success
+
+[11:17:14] [8/23] Launching CHROME: https://www.mydlink.com/singleView?no=50539785&model=DCS-8630LH
+[11:17:15] Opened Chrome tab on Monitor 2 (DISPLAY7), Location bottom-center: https://www.mydlink.com/singleView?no=50539785&model=DCS-863...
+[11:17:15]   [OK] Success
+
+[11:17:15] [9/23] Launching CHROME: https://www.mydlink.com/singleView?no=50539785&model=DCS-8630LH
+[11:17:15] Opened Chrome tab on Monitor 2 (DISPLAY7), Location bottom-right: https://www.mydlink.com/singleView?no=50539785&model=DCS-863...
+[11:17:15]   [OK] Success
+
+[11:17:15] [10/23] Launching CHROME: http://10.0.0.251:8080/
+[11:17:15] Opened Chrome tab on Monitor 3 (DISPLAY1), Location center: http://10.0.0.251:8080/...
+[11:17:15]   [OK] Success
+
+[11:17:15] [11/23] Launching CHROME: https://www.flightradar24.com/42.39
+[11:17:15] Opened Chrome tab on Monitor 3 (DISPLAY1), Location center: https://www.flightradar24.com/42.39...
+[11:17:15]   [OK] Success
+
+[11:17:15] [12/23] Launching CHROME: https://www.google.com/finance/?authuser=0
+[11:17:15] Opened Chrome tab on Monitor 3 (DISPLAY1), Location center: https://www.google.com/finance/?authuser=0...
+[11:17:15]   [OK] Success
+
+[11:17:15] [13/23] Launching CHROME: https://open.spotify.com/
+[11:17:16] Opened Chrome tab on Monitor 3 (DISPLAY1), Location center: https://open.spotify.com/...
+[11:17:16]   [OK] Success
+
+[11:17:16] [14/23] Launching CHROME: https://www.wunderground.com/
+[11:17:16] Opened Chrome tab on Monitor 3 (DISPLAY1), Location center: https://www.wunderground.com/...
+[11:17:16]   [OK] Success
+
+[11:17:16] [15/23] Launching CHROME: https://www.xda-developers.com/
+[11:17:16] Opened Chrome tab on Monitor 4 (DISPLAY2), Location center: https://www.xda-developers.com/...
+[11:17:16]   [OK] Success
+
+[11:17:16] [16/23] Launching CHROME: https://www.dishanywhere.com/guide
+[11:17:16] Opened Chrome tab on Monitor 4 (DISPLAY2), Location center: https://www.dishanywhere.com/guide...
+[11:17:16]   [OK] Success
+
+[11:17:16] [17/23] Launching CHROME: https://www.youtube.com/
+[11:17:17] Opened Chrome tab on Monitor 4 (DISPLAY2), Location center: https://www.youtube.com/...
+[11:17:17]   [OK] Success
+
+[11:17:17] [18/23] Launching CHROME: https://mail.google.com/mail/u/0/?ogbl#inbox
+[11:17:17] Opened Chrome tab on Monitor 5 (DISPLAY3), Location left: https://mail.google.com/mail/u/0/?ogbl#inbox...
+[11:17:17]   [OK] Success
+
+[11:17:17] [19/23] Launching CHROME: https://messages.google.com/web/conversations
+[11:17:17] Opened Chrome tab on Monitor 5 (DISPLAY3), Location left: https://messages.google.com/web/conversations...
+[11:17:17]   [OK] Success
+
+[11:17:17] [20/23] Launching CHROME: https://www.detroitnews.com/
+[11:17:17] Opened Chrome tab on Monitor 5 (DISPLAY3), Location left: https://www.detroitnews.com/...
+[11:17:17]   [OK] Success
+
+[11:17:17] [21/23] Launching CHROME: https://gemini.google.com/app
+[11:17:18] Opened Chrome tab on Monitor 5 (DISPLAY3), Location right: https://gemini.google.com/app...
+[11:17:18]   [OK] Success
+
+[11:17:18] [22/23] Launching CHROME: https://calendar.google.com/calendar/u/0/r
+[11:17:18] Opened Chrome tab on Monitor 5 (DISPLAY3), Location right: https://calendar.google.com/calendar/u/0/r...
+[11:17:18]   [OK] Success
+
+[11:17:18] [23/23] Launching CHROME: https://www.facebook.com/messages
+[11:17:18] Opened Chrome tab on Monitor 5 (DISPLAY3), Location right: https://www.facebook.com/messages...
+[11:17:18]   [OK] Success
+
+[11:17:18] 
+============================================================
+[11:17:18] Positioning windows to monitors...
+[11:17:18] ============================================================
+
+[11:17:20] Positioning PROGRAM: Ollma
+[11:17:20]   Target: Monitor 1 (DISPLAY6), Location left
+[11:17:20]   Bounds: (7680, 537) 1920x1620
+[11:17:20]   Window not found
+[11:17:20] 
+[11:17:20] Positioning PROGRAM: Bambu Studio.exe
+[11:17:20]   Target: Monitor 1 (DISPLAY6), Location left
+[11:17:20]   Bounds: (9600, 537) 1920x1620
+[11:17:20]   Window not found
+[11:17:20] 
+[11:17:20] Positioning PROGRAM: Visual Studio Code.exe
+[11:17:20]   Target: Monitor 1 (DISPLAY6), Location right
+[11:17:20]   Bounds: (7680, 2157) 1920x1620
+[11:17:20]   Found window: Welcome - Visual Studio Code
+[11:17:20]   [POSITIONED] to Monitor 1
+[11:17:20] 
+[11:17:20] Positioning CHROME: https://www.mydlink.com/singleView?no=53
+[11:17:20]   Target: Monitor 2 (DISPLAY7), Location top-left
+[11:17:20]   Bounds: (-3840, 0) 1280x1080
+[11:17:20]   Found window: Untitled - Google Chrome
+[11:17:20]   Could not position: Error code from Windows: 5 - Access is denied.
+[11:17:20] 
+[11:17:20] Positioning CHROME: https://www.mydlink.com/singleView?no=53
+[11:17:20]   Target: Monitor 2 (DISPLAY7), Location top-center
+[11:17:20]   Bounds: (-2560, 0) 1280x1080
+[11:17:20]   Found window: Untitled - Google Chrome
+[11:17:20]   Could not position: Error code from Windows: 5 - Access is denied.
+[11:17:20] 
+[11:17:20] Positioning CHROME: https://www.mydlink.com/singleView?no=50
+[11:17:20]   Target: Monitor 2 (DISPLAY7), Location top-right
+[11:17:20]   Bounds: (-1280, 0) 1280x1080
+[11:17:20]   Found window: Untitled - Google Chrome
+[11:17:20]   Could not position: Error code from Windows: 5 - Access is denied.
+[11:17:20] 
+[11:17:20] Positioning CHROME: https://www.mydlink.com/singleView?no=50
+[11:17:20]   Target: Monitor 2 (DISPLAY7), Location bottom-left
+[11:17:20]   Bounds: (-3840, 1080) 1280x1080
+[11:17:20]   Found window: Untitled - Google Chrome
+[11:17:20]   Could not position: Error code from Windows: 5 - Access is denied.
+[11:17:20] 
+[11:17:20] Positioning CHROME: https://www.mydlink.com/singleView?no=50
+[11:17:20]   Target: Monitor 2 (DISPLAY7), Location bottom-center
+[11:17:20]   Bounds: (-2560, 1080) 1280x1080
+[11:17:20]   Found window: Untitled - Google Chrome
+[11:17:20]   Could not position: Error code from Windows: 5 - Access is denied.
+[11:17:20] 
+[11:17:20] Positioning CHROME: https://www.mydlink.com/singleView?no=50
+[11:17:20]   Target: Monitor 2 (DISPLAY7), Location bottom-right
+[11:17:20]   Bounds: (-1280, 1080) 1280x1080
+[11:17:20]   Found window: Untitled - Google Chrome
+[11:17:20]   Could not position: Error code from Windows: 5 - Access is denied.
+[11:17:20] 
+[11:17:20] Positioning CHROME: http://10.0.0.251:8080/
+[11:17:20]   Target: Monitor 3 (DISPLAY1), Location center
+[11:17:20]   Bounds: (-2038, -3240) 5760x3240
+[11:17:20]   Found window: Untitled - Google Chrome
+[11:17:20]   Could not position: Error code from Windows: 5 - Access is denied.
+[11:17:20] 
+[11:17:20] Positioning CHROME: https://www.flightradar24.com/42.39
+[11:17:20]   Target: Monitor 3 (DISPLAY1), Location center
+[11:17:20]   Bounds: (-2038, 0) 5760x3240
+[11:17:20]   Found window: Untitled - Google Chrome
+[11:17:20]   Could not position: Error code from Windows: 5 - Access is denied.
+[11:17:20] 
+[11:17:20] Positioning CHROME: https://www.google.com/finance/?authuser
+[11:17:20]   Target: Monitor 3 (DISPLAY1), Location center
+[11:17:20]   Bounds: (-2038, 3240) 5760x3240
+[11:17:20]   Found window: Untitled - Google Chrome
+[11:17:20]   Could not position: Error code from Windows: 5 - Access is denied.
+[11:17:20] 
+[11:17:20] Positioning CHROME: https://open.spotify.com/
+[11:17:20]   Target: Monitor 3 (DISPLAY1), Location center
+[11:17:20]   Bounds: (-2038, 6480) 5760x3240
+[11:17:20]   Found window: Untitled - Google Chrome
+[11:17:20]   Could not position: Error code from Windows: 5 - Access is denied.
+[11:17:20] 
+[11:17:20] Positioning CHROME: https://www.wunderground.com/
+[11:17:20]   Target: Monitor 3 (DISPLAY1), Location center
+[11:17:20]   Bounds: (-2038, 9720) 5760x3240
+[11:17:20]   Found window: Untitled - Google Chrome
+[11:17:20]   Could not position: Error code from Windows: 5 - Access is denied.
+[11:17:20] 
+[11:17:20] Positioning CHROME: https://www.xda-developers.com/
+[11:17:20]   Target: Monitor 4 (DISPLAY2), Location center
+[11:17:20]   Bounds: (3744, -3240) 5760x3240
+[11:17:20]   Found window: Untitled - Google Chrome
+[11:17:20]   Could not position: Error code from Windows: 5 - Access is denied.
+[11:17:20] 
+[11:17:20] Positioning CHROME: https://www.dishanywhere.com/guide
+[11:17:20]   Target: Monitor 4 (DISPLAY2), Location center
+[11:17:20]   Bounds: (3744, 0) 5760x3240
+[11:17:20]   Found window: Untitled - Google Chrome
+[11:17:20]   Could not position: Error code from Windows: 5 - Access is denied.
+[11:17:20] 
+[11:17:20] Positioning CHROME: https://www.youtube.com/
+[11:17:20]   Target: Monitor 4 (DISPLAY2), Location center
+[11:17:20]   Bounds: (3744, 3240) 5760x3240
+[11:17:20]   Found window: Untitled - Google Chrome
+[11:17:20]   Could not position: Error code from Windows: 5 - Access is denied.
+[11:17:20] 
+[11:17:20] Positioning CHROME: https://mail.google.com/mail/u/0/?ogbl#i
+[11:17:20]   Target: Monitor 5 (DISPLAY3), Location left
+[11:17:20]   Bounds: (0, 0) 3840x2160
+[11:17:20]   Found window: Untitled - Google Chrome
+[11:17:20]   Could not position: Error code from Windows: 5 - Access is denied.
+[11:17:20] 
+[11:17:20] Positioning CHROME: https://messages.google.com/web/conversa
+[11:17:20]   Target: Monitor 5 (DISPLAY3), Location left
+[11:17:20]   Bounds: (3840, 0) 3840x2160
+[11:17:20]   Found window: Untitled - Google Chrome
+[11:17:20]   Could not position: Error code from Windows: 5 - Access is denied.
+[11:17:20] 
+[11:17:20] Positioning CHROME: https://www.detroitnews.com/
+[11:17:20]   Target: Monitor 5 (DISPLAY3), Location left
+[11:17:20]   Bounds: (0, 2160) 3840x2160
+[11:17:20]   Found window: Untitled - Google Chrome
+[11:17:20]   Could not position: Error code from Windows: 5 - Access is denied.
+[11:17:20] 
+[11:17:20] Positioning CHROME: https://gemini.google.com/app
+[11:17:20]   Target: Monitor 5 (DISPLAY3), Location right
+[11:17:20]   Bounds: (3840, 2160) 3840x2160
+[11:17:20]   Found window: Untitled - Google Chrome
+[11:17:20]   Could not position: Error code from Windows: 5 - Access is denied.
+[11:17:20] 
+[11:17:20] Positioning CHROME: https://calendar.google.com/calendar/u/0
+[11:17:20]   Target: Monitor 5 (DISPLAY3), Location right
+[11:17:20]   Bounds: (0, 4320) 3840x2160
+[11:17:20]   Found window: Untitled - Google Chrome
+[11:17:20]   Could not position: Error code from Windows: 5 - Access is denied.
+[11:17:20] 
+[11:17:20] Positioning CHROME: https://www.facebook.com/messages
+[11:17:20]   Target: Monitor 5 (DISPLAY3), Location right
+[11:17:20]   Bounds: (3840, 4320) 3840x2160
+[11:17:20]   Found window: Untitled - Google Chrome
+[11:17:20]   Could not position: Error code from Windows: 5 - Access is denied.
+[11:17:20] 
