@@ -17,7 +17,7 @@ class LaunchLogger:
     
     def log(self, message: str):
         """Write message to log file."""
-        with open(self.log_file, "a") as f:
+        with open(self.log_file, "a", encoding="utf-8") as f:
             f.write(f"[{datetime.now().strftime('%H:%M:%S')}] {message}\n")
         print(message)
     
@@ -93,7 +93,7 @@ class DisplayFusionManager:
         
         Args:
             monitor: Monitor number
-            field_index: 0-based field index
+            field_index: 0-based field index (fallback)
             location_id: Optional location identifier (top-left, center, etc.)
         
         Returns: (x, y, width, height)
@@ -101,14 +101,49 @@ class DisplayFusionManager:
         if monitor not in self.monitor_info:
             return (0, 0, 800, 600)
 
-        layout = self.MONITOR_LAYOUTS.get(monitor, {"fields": 1, "cols": 1, "rows": 1})
+        layout = self.MONITOR_LAYOUTS.get(monitor, {"cols": 1, "rows": 1})
         mon_info = self.monitor_info[monitor]
 
-        cols = layout["cols"]
-        rows = layout["rows"]
+        cols = layout.get("cols", 1)
+        rows = layout.get("rows", 1)
 
-        col = field_index % cols
-        row = field_index // cols
+        # Base calculations on location_id if available, otherwise fallback to field_index
+        col = 0
+        row = 0
+        
+        if location_id:
+            loc = location_id.lower()
+            if "center" in loc and cols == 1 and rows == 1:
+                col = 0
+                row = 0
+            elif "left" in loc and not "top" in loc and not "bottom" in loc:
+                col = 0
+                row = 0
+            elif "right" in loc and not "top" in loc and not "bottom" in loc:
+                col = 1
+                row = 0
+            elif "top-left" in loc:
+                col = 0; row = 0
+            elif "top-center" in loc:
+                col = 1; row = 0
+            elif "top-right" in loc:
+                col = 2; row = 0
+            elif "bottom-left" in loc:
+                col = 0; row = 1
+            elif "bottom-center" in loc:
+                col = 1; row = 1
+            elif "bottom-right" in loc:
+                col = 2; row = 1
+            else:
+                col = field_index % cols
+                row = field_index // cols
+                # Cap the row so we don't go off screen if user adds too many
+                row = min(row, rows - 1)
+        else:
+            col = field_index % cols
+            row = field_index // cols
+            # Cap the row so we don't go off screen if user adds too many
+            row = min(row, rows - 1)
 
         x = mon_info["x"] + (col * mon_info["width"]) // cols
         y = mon_info["y"] + (row * mon_info["height"]) // rows
@@ -147,38 +182,96 @@ if (w > 0) {{
 
     def launch_apps(self, app_configs: list):
         """
-        Launch all applications using DisplayFusion.
-        
-        Args:
-            app_configs: List of AppConfig objects
+        Launch all applications and position them immediately.
+        Groups Chrome tabs by monitor/location to keep them in the same window.
         """
         self.logger.log(f"\n{'='*60}")
-        self.logger.log(f"Starting to launch {len(app_configs)} applications...")
+        self.logger.log(f"Starting to launch and position {len(app_configs)} applications...")
         self.logger.log(f"{'='*60}\n")
         
-        if not self.displayfusion_path:
-            self.logger.log("WARNING: DisplayFusion not found. Using fallback launch mode.")
-        
-        for i, config in enumerate(app_configs, 1):
+        try:
+            import pygetwindow as gw
+            import time
+        except ImportError:
+            self.logger.log("WARNING: pygetwindow not available for window positioning")
+            return
+            
+        # Group Chrome configs by (monitor, location_id) to combine tabs into one window
+        launch_groups = []
+        chrome_groups = {}
+        for config in app_configs:
+            if config.app_type.lower() == "chrome":
+                key = (config.monitor, config.location_id)
+                if key not in chrome_groups:
+                    chrome_groups[key] = []
+                    launch_groups.append(("chrome", chrome_groups[key]))
+                chrome_groups[key].append(config)
+            else:
+                launch_groups.append(("program", [config]))
+
+        for i, (group_type, configs) in enumerate(launch_groups, 1):
             try:
-                self.logger.log(f"[{i}/{len(app_configs)}] Launching {config.app_type.upper()}: {config.target}")
-                if config.app_type.lower() == "chrome":
-                    self._launch_chrome(config)
+                base_config = configs[0]
+                display_name = self.DISPLAY_NAMES.get(base_config.monitor, f"DISPLAY{base_config.monitor}")
+                
+                if group_type == "chrome":
+                    urls = [c.target for c in configs]
+                    self.logger.log(f"[{i}/{len(launch_groups)}] Launching CHROME GROUP ({len(urls)} tabs)")
+                    self.logger.log(f"    Target: Monitor {base_config.monitor} ({display_name}), Location {base_config.location_id}")
+                    
+                    # Snapshot window handles before launch
+                    before_hwnds = {getattr(w, '_hWnd', None) for w in gw.getAllWindows()}
+                    
+                    # Launch all URLs in one command
+                    self._launch_chrome_group(base_config, urls)
                 else:
-                    self._launch_program(config)
-                self.logger.log(f"  [OK] Success\n")
+                    self.logger.log(f"[{i}/{len(launch_groups)}] Launching PROGRAM: {base_config.target[:50]}")
+                    self.logger.log(f"    Target: Monitor {base_config.monitor} ({display_name}), Location {base_config.location_id}")
+                    
+                    # Snapshot window handles before launch
+                    before_hwnds = {getattr(w, '_hWnd', None) for w in gw.getAllWindows()}
+                    
+                    self._launch_program(base_config)
+                
+                # Wait and poll for a new window to appear (up to 15 seconds)
+                target_window = None
+                for _ in range(30):
+                    time.sleep(0.5)
+                    after_windows = gw.getAllWindows()
+                    new_windows = [w for w in after_windows if getattr(w, '_hWnd', None) not in before_hwnds]
+                    
+                    # Filter for visible, titled windows
+                    valid_new = [
+                        w for w in new_windows 
+                        if w.title.strip() 
+                        and "untitled" not in w.title.lower()
+                        and "webpage launcher" not in w.title.lower()
+                    ]
+                    
+                    if valid_new:
+                        target_window = valid_new[0]
+                        break
+                
+                if target_window:
+                    self.logger.log(f"    Found new window: {target_window.title[:50]}")
+                    x, y, width, height = self.get_field_bounds(base_config.monitor, base_config.position - 1, base_config.location_id)
+                    
+                    try:
+                        if hasattr(target_window, 'isMaximized') and target_window.isMaximized:
+                            target_window.restore()
+                            time.sleep(0.1)
+                            
+                        target_window.moveTo(x, y)
+                        target_window.resizeTo(width, height)
+                        self.logger.log(f"    [POSITIONED] Successfully moved to Monitor {base_config.monitor}")
+                    except Exception as e:
+                        self.logger.log(f"    [WARNING] Could not move window: {e}")
+                else:
+                    self.logger.log(f"    [WARNING] Could not detect any new window to position after 15 seconds.")
+                
+                self.logger.log("")
             except Exception as e:
-                self.logger.log(f"  [ERROR] {e}\n")
-        
-        # After all apps launched, position windows
-        self.logger.log(f"\n{'='*60}")
-        self.logger.log("Positioning windows to monitors...")
-        self.logger.log(f"{'='*60}\n")
-        
-        import time
-        time.sleep(2)  # Give apps time to open
-        
-        self._position_windows(app_configs)
+                self.logger.log(f"    [ERROR] {e}\n")
 
     def _launch_chrome(self, config):
         """Launch a Chrome tab and position it."""
@@ -192,6 +285,17 @@ if (w > 0) {{
         else:
             self.logger.log(f"Failed to open Chrome tab: {config.target}")
 
+    def _launch_chrome_group(self, config, urls):
+        """Launch a group of Chrome tabs in a single window and position it."""
+        from src.core.chrome_manager import ChromeManager
+        chrome_mgr = ChromeManager()
+        
+        display_name = self.DISPLAY_NAMES.get(config.monitor, f"DISPLAY{config.monitor}")
+        if chrome_mgr.open_url_group(urls):
+            self.logger.log(f"Opened Chrome Group ({len(urls)} tabs) on Monitor {config.monitor} ({display_name}), Location {config.location_id}")
+        else:
+            self.logger.log(f"Failed to open Chrome group")
+
     def _launch_program(self, config):
         """Launch a program and position it."""
         x, y, width, height = self.get_field_bounds(config.monitor, config.position - 1, config.location_id)
@@ -200,6 +304,7 @@ if (w > 0) {{
         try:
             import os
             import shutil
+            from pathlib import Path
             
             # Try to find the program
             program_name = config.target
@@ -212,7 +317,6 @@ if (w > 0) {{
                 os.startfile(str(program_name))
                 self.logger.log(f"    Launched via os.startfile()")
             else:
-                import shutil
                 # Try to find in PATH
                 found_path = shutil.which(program_name)
                 if found_path:
@@ -228,9 +332,11 @@ if (w > 0) {{
                         Path("C:\\Program Files (x86)") / program_name,
                         Path.home() / "AppData" / "Local" / "Programs" / program_name,
                         
-                        # Specific common apps - VS Code
+                        # Specific common apps
                         Path.home() / "AppData" / "Local" / "Programs" / "Microsoft VS Code" / "Code.exe" if "code" in program_name.lower() else None,
                         Path("C:\\Program Files\\Microsoft VS Code\\Code.exe") if "code" in program_name.lower() else None,
+                        Path("C:\\Program Files\\Bambu Studio\\bambu-studio.exe") if "bambu" in program_name.lower() else None,
+                        Path.home() / "AppData" / "Local" / "AMD" / "AI_Bundle" / "Ollama" / "ollama app.exe" if "ollma" in program_name.lower() or "ollama" in program_name.lower() else None,
                         
                         # Common app folder locations with executable
                         Path("C:\\Program Files") / program_name / (program_name + ".exe"),
@@ -259,72 +365,3 @@ if (w > 0) {{
         except Exception as e:
             self.logger.log(f"    Exception: {e}")
 
-    def _launch_without_displayfusion(self, app_configs: list):
-        """Launch apps without DisplayFusion (fallback)."""
-        from src.core.chrome_manager import ChromeManager
-        import subprocess
-        
-        chrome_mgr = ChromeManager()
-        
-        for config in app_configs:
-            try:
-                if config.app_type.lower() == "chrome":
-                    chrome_mgr.open_url(config.target)
-                else:
-                    subprocess.Popen(config.target)
-            except Exception as e:
-                print(f"Error launching {config.target}: {e}")
-    
-    def _position_windows(self, app_configs: list):
-        """Position all launched windows to their assigned monitors and locations."""
-        try:
-            import pygetwindow as gw
-            import time
-        except ImportError:
-            self.logger.log("WARNING: pygetwindow not available for window positioning")
-            return
-        
-        for config in app_configs:
-            try:
-                x, y, width, height = self.get_field_bounds(config.monitor, config.position - 1, config.location_id)
-                
-                display_name = self.DISPLAY_NAMES.get(config.monitor, f"DISPLAY{config.monitor}")
-                self.logger.log(f"Positioning {config.app_type.upper()}: {config.target[:40]}")
-                self.logger.log(f"  Target: Monitor {config.monitor} ({display_name}), Location {config.location_id}")
-                self.logger.log(f"  Bounds: ({x}, {y}) {width}x{height}")
-                
-                # Find the window
-                windows = gw.getAllWindows()
-                target_window = None
-                
-                if config.app_type.lower() == "chrome":
-                    # For Chrome, look for window with URL title
-                    for win in windows:
-                        if "chrome" in win.title.lower() and len(win.title) > 10:
-                            # Skip if already positioned
-                            if win.left != 0 or win.top != 0:
-                                target_window = win
-                                break
-                else:
-                    # For programs, look for window with program name
-                    program_name = config.target
-                    for win in windows:
-                        if program_name.replace(".exe", "").lower() in win.title.lower():
-                            target_window = win
-                            break
-                
-                if target_window:
-                    self.logger.log(f"  Found window: {target_window.title[:50]}")
-                    try:
-                        target_window.moveTo(x, y)
-                        target_window.resizeTo(width, height)
-                        self.logger.log(f"  [POSITIONED] to Monitor {config.monitor}")
-                    except Exception as e:
-                        self.logger.log(f"  Could not position: {e}")
-                else:
-                    self.logger.log(f"  Window not found")
-                
-                self.logger.log("")
-                
-            except Exception as e:
-                self.logger.log(f"  Error positioning: {e}\n")

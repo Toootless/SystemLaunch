@@ -52,12 +52,12 @@
 
 
 # Monitor 2 → DISPLAY7 (2x3 Grid)
-2,1,top-left,chrome,https://www.mydlink.com/singleView?no=53708489&model=DCS-8526LH
-2,2,top-center,chrome,https://www.mydlink.com/singleView?no=53708489&model=DCS-8526LH
+2,1,top-left,chrome,https://www.mydlink.com/singleView?no=51575554&model=DCS-8302LH
+2,2,top-center,chrome,https://www.mydlink.com/singleView?no=50539783&model=DCS-8630LH
 2,3,top-right,chrome,https://www.mydlink.com/singleView?no=50539785&model=DCS-8630LH
-2,4,bottom-left,chrome,https://www.mydlink.com/singleView?no=50539785&model=DCS-8630LH
-2,5,bottom-center,chrome,https://www.mydlink.com/singleView?no=50539785&model=DCS-8630LH
-2,6,bottom-right,chrome,https://www.mydlink.com/singleView?no=50539785&model=DCS-8630LH
+2,4,bottom-left,chrome,https://www.mydlink.com/singleView?no=53709444&model=DCS-8526LH
+2,5,bottom-center,chrome,https://www.mydlink.com/singleView?no=53709041&model=DCS-8526LH
+2,6,bottom-right,chrome,https://www.mydlink.com/singleView?no=53708489&model=DCS-8526LH
 
 # Monitor 3 → DISPLAY1 (Full Screen)
 3,1,center,chrome,http://10.0.0.251:8080/

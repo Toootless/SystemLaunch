@@ -32,10 +32,26 @@ class ChromeManager:
         if self.chrome_path and self.chrome_path.exists():
             try:
                 print(f"    Opening Chrome: {self.chrome_path}")
-                import os
-                # Use os.startfile for native Windows launching (avoids elevation issues)
-                os.startfile(str(self.chrome_path), arguments=url)
-                print(f"    Launched via os.startfile()")
+                import subprocess
+                subprocess.Popen([str(self.chrome_path), "--new-window", url])
+                print(f"    Launched via subprocess")
+                return True
+            except Exception as e:
+                print(f"    Error: {e}")
+                return False
+        else:
+            print(f"    Chrome NOT found. Tried: {self.chrome_path}")
+            return False
+
+    def open_url_group(self, urls):
+        """Open multiple URLs as tabs in a single new Chrome window."""
+        if self.chrome_path and self.chrome_path.exists():
+            try:
+                print(f"    Opening Chrome Group with {len(urls)} tabs: {self.chrome_path}")
+                import subprocess
+                cmd = [str(self.chrome_path), "--new-window"] + urls
+                subprocess.Popen(cmd)
+                print(f"    Launched group via subprocess")
                 return True
             except Exception as e:
                 print(f"    Error: {e}")
