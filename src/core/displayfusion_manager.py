@@ -77,13 +77,32 @@ class DisplayFusionManager:
         try:
             import screeninfo
             monitors = screeninfo.get_monitors()
+            
+            # Map from Display Name (e.g. "DISPLAY6") to config ID (1-5)
+            name_map = {v: k for k, v in self.DISPLAY_NAMES.items()}
+            
+            for monitor in monitors:
+                # monitor.name comes like "\\.\DISPLAY6"
+                name = monitor.name.replace("\\\\.\\", "") if monitor.name else ""
+                
+                if name in name_map:
+                    mon_id = name_map[name]
+                    self.monitor_info[mon_id] = {
+                        "width": monitor.width,
+                        "height": monitor.height,
+                        "x": monitor.x,
+                        "y": monitor.y,
+                    }
+                    
+            # Fallback for any monitor IDs that weren't found by name
             for i, monitor in enumerate(monitors, 1):
-                self.monitor_info[i] = {
-                    "width": monitor.width,
-                    "height": monitor.height,
-                    "x": monitor.x,
-                    "y": monitor.y,
-                }
+                if i not in self.monitor_info and i in self.DISPLAY_NAMES:
+                    self.monitor_info[i] = {
+                        "width": monitor.width,
+                        "height": monitor.height,
+                        "x": monitor.x,
+                        "y": monitor.y,
+                    }
         except Exception as e:
             print(f"Error detecting monitors: {e}")
 
@@ -337,6 +356,12 @@ if (w > 0) {{
                         Path("C:\\Program Files\\Microsoft VS Code\\Code.exe") if "code" in program_name.lower() else None,
                         Path("C:\\Program Files\\Bambu Studio\\bambu-studio.exe") if "bambu" in program_name.lower() else None,
                         Path.home() / "AppData" / "Local" / "AMD" / "AI_Bundle" / "Ollama" / "ollama app.exe" if "ollma" in program_name.lower() or "ollama" in program_name.lower() else None,
+                        
+                        # Microsoft Office apps
+                        Path("C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.exe") if "winword" in program_name.lower() or "word" in program_name.lower() else None,
+                        Path("C:\\Program Files (x86)\\Microsoft Office\\root\\Office16\\WINWORD.exe") if "winword" in program_name.lower() or "word" in program_name.lower() else None,
+                        Path("C:\\Program Files\\Microsoft Office\\root\\Office365\\WINWORD.exe") if "winword" in program_name.lower() or "word" in program_name.lower() else None,
+                        Path("C:\\Program Files (x86)\\Microsoft Office\\root\\Office365\\WINWORD.exe") if "winword" in program_name.lower() or "word" in program_name.lower() else None,
                         
                         # Common app folder locations with executable
                         Path("C:\\Program Files") / program_name / (program_name + ".exe"),

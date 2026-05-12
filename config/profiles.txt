@@ -46,25 +46,26 @@
 # 5,2,right,chrome,https://calendar.google.com
 
 # Monitor 1 → DISPLAY6 (Left-Right Split)
-1,1,left,program,Ollma
-1,2,left,program,Bambu Studio.exe
-1,3,right,program,Visual Studio Code.exe
+1,1,right,program,Ollama
+1,2,right,program,Bambu Studio.exe
+1,3,left,program,WINWORD.exe
 
 
 # Monitor 2 → DISPLAY7 (2x3 Grid)
-2,1,top-left,chrome,https://www.mydlink.com/singleView?no=51575554&model=DCS-8302LH
-2,2,top-center,chrome,https://www.mydlink.com/singleView?no=50539783&model=DCS-8630LH
-2,3,top-right,chrome,https://www.mydlink.com/singleView?no=50539785&model=DCS-8630LH
-2,4,bottom-left,chrome,https://www.mydlink.com/singleView?no=53709444&model=DCS-8526LH
-2,5,bottom-center,chrome,https://www.mydlink.com/singleView?no=53709041&model=DCS-8526LH
-2,6,bottom-right,chrome,https://www.mydlink.com/singleView?no=53708489&model=DCS-8526LH
+2,1,top-left,chrome,https://www.mydlink.com/login?device=1
+2,2,top-center,chrome,https://www.mydlink.com/login?device=2
+2,3,top-right,chrome,https://www.mydlink.com/login?device=3
+2,4,bottom-left,chrome,https://www.mydlink.com/login?device=4
+2,5,bottom-center,chrome,https://www.mydlink.com/login?device=5
+2,6,bottom-right,chrome,https://www.mydlink.com/login?device=6
 
 # Monitor 3 → DISPLAY1 (Full Screen)
 3,1,center,chrome,http://10.0.0.251:8080/
-3,2,center,chrome,https://www.flightradar24.com/42.39,-84.19/9
+3,2,center,chrome,https://www.flightradar24.com/42.23,-83.32/10
 3,3,center,chrome,https://www.google.com/finance/?authuser=0
 3,4,center,chrome,https://open.spotify.com/
 3,5,center,chrome,https://www.wunderground.com/
+3,6,center,program,Visual Studio Code.exe
 
 # Monitor 4 → DISPLAY2 (Full Screen)
 4,1,center,chrome,https://www.xda-developers.com/
@@ -73,8 +74,13 @@
 
 # Monitor 5 → DISPLAY3 (Chrome Groups Left-Right)
 5,1,left,chrome,https://mail.google.com/mail/u/0/?ogbl#inbox
-5,2,left,chrome,https://messages.google.com/web/conversations
-5,3,left,chrome,https://www.detroitnews.com/
-5,4,right,chrome,https://gemini.google.com/app
-5,5,right,chrome,https://calendar.google.com/calendar/u/0/r
-5,6,right,chrome,https://www.facebook.com/messages
+5,2,left,chrome,https://mail.google.com/mail/u/1/?ogbl#inbox
+5,3,left,chrome,https://messages.google.com/web/conversations
+5,4,left,chrome,https://www.detroitnews.com/
+5,5,left,chrome,https://www.freep.com/
+5,5,left,chrome,https://www.linkedin.com/feed/
+
+5,6,right,chrome,https://gemini.google.com/app
+5,7,right,chrome,https://calendar.google.com/calendar/u/0/r
+5,8,right,chrome,https://www.facebook.com/messages
+5,9,right,chrome,https://www.facebook.com/

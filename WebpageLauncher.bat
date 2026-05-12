@@ -11,5 +11,6 @@ if %errorLevel% == 0 (
 
 :run
 cd /d "C:\Users\johnj\OneDrive\Documents\___DesktopSetup\webpage-launcher"
-start "" "C:\Users\johnj\OneDrive\Documents\VS_projects\Prohram_IDE_files\webpage_launcher_venv\Scripts\python.exe" "src\main.py"
-exit
+start /B "" "C:\Users\johnj\OneDrive\Documents\VS_projects\Prohram_IDE_files\webpage_launcher_venv\Scripts\python.exe" "src\main.py"
+timeout /t 1 /nobreak >nul
+exit /b 0
