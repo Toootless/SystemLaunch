@@ -228,21 +228,33 @@ if (w > 0) {{
             else:
                 launch_groups.append(("program", [config]))
 
+        # Track consecutive window enumeration failures
+        enum_failures = 0
+        max_enum_failures_before_disable = 3
+        disable_positioning = False
+
         for i, (group_type, configs) in enumerate(launch_groups, 1):
             try:
                 base_config = configs[0]
                 display_name = self.DISPLAY_NAMES.get(base_config.monitor, f"DISPLAY{base_config.monitor}")
+                
+                # Check if this app has skip_positioning flag
+                skip_this_app = base_config.skip_positioning or disable_positioning
                 
                 if group_type == "chrome":
                     urls = [c.target for c in configs]
                     self.logger.log(f"[{i}/{len(launch_groups)}] Launching CHROME GROUP ({len(urls)} tabs)")
                     self.logger.log(f"    Target: Monitor {base_config.monitor} ({display_name}), Location {base_config.location_id}")
                     
-                    # Snapshot window handles before launch
-                    try:
-                        before_hwnds = {getattr(w, '_hWnd', None) for w in gw.getAllWindows()}
-                    except Exception as e:
-                        self.logger.log(f"    [WARNING] Could not snapshot windows before launch: {e}")
+                    # Snapshot window handles before launch (unless skipping positioning)
+                    if not skip_this_app:
+                        try:
+                            before_hwnds = {getattr(w, '_hWnd', None) for w in gw.getAllWindows()}
+                        except Exception as e:
+                            self.logger.log(f"    [WARNING] Could not snapshot windows before launch: {e}")
+                            before_hwnds = set()
+                            enum_failures += 1
+                    else:
                         before_hwnds = set()
                     
                     # Launch all URLs in one command
@@ -251,25 +263,37 @@ if (w > 0) {{
                     self.logger.log(f"[{i}/{len(launch_groups)}] Launching PROGRAM: {base_config.target[:50]}")
                     self.logger.log(f"    Target: Monitor {base_config.monitor} ({display_name}), Location {base_config.location_id}")
                     
-                    # Snapshot window handles before launch
-                    try:
-                        before_hwnds = {getattr(w, '_hWnd', None) for w in gw.getAllWindows()}
-                    except Exception as e:
-                        self.logger.log(f"    [WARNING] Could not snapshot windows before launch: {e}")
+                    # Snapshot window handles before launch (unless skipping positioning)
+                    if not skip_this_app:
+                        try:
+                            before_hwnds = {getattr(w, '_hWnd', None) for w in gw.getAllWindows()}
+                        except Exception as e:
+                            self.logger.log(f"    [WARNING] Could not snapshot windows before launch: {e}")
+                            before_hwnds = set()
+                            enum_failures += 1
+                    else:
                         before_hwnds = set()
                     
                     self._launch_program(base_config)
                 
-                # Skip window positioning for apps that request it (e.g., 3D graphics apps that crash window enumeration)
-                if base_config.skip_positioning:
-                    self.logger.log(f"    [LAUNCHED] on Monitor {base_config.monitor} ({display_name}) - Window positioning skipped per config")
+                # Skip window positioning for apps that request it
+                if skip_this_app:
+                    if base_config.skip_positioning:
+                        self.logger.log(f"    [LAUNCHED] on Monitor {base_config.monitor} ({display_name}) - Window positioning skipped per config")
+                    else:
+                        self.logger.log(f"    [LAUNCHED] on Monitor {base_config.monitor} ({display_name}) - Window positioning disabled due to enumeration errors")
                     self.logger.log("")
+                    
+                    # Check if we've had too many failures - if so, disable positioning for remaining apps
+                    if enum_failures >= max_enum_failures_before_disable and not disable_positioning:
+                        self.logger.log(f"[WARNING] Multiple window enumeration failures detected. Disabling positioning for remaining apps.")
+                        disable_positioning = True
                     continue
                 
                 # Wait and poll for a new window to appear (up to 15 seconds)
                 target_window = None
                 try:
-                    for _ in range(30):
+                    for attempt in range(30):
                         try:
                             time.sleep(0.5)
                             after_windows = gw.getAllWindows()
@@ -287,28 +311,37 @@ if (w > 0) {{
                                 target_window = valid_new[0]
                                 break
                         except Exception as window_enum_error:
-                            # Some applications (like Bambu Studio) can cause issues with window enumeration
-                            self.logger.log(f"    [DEBUG] Window enumeration error (iteration): {type(window_enum_error).__name__}")
+                            # Some applications (like Bambu Studio, Chrome) can cause issues with window enumeration
+                            if attempt % 5 == 0:  # Log every 5 attempts to reduce noise
+                                self.logger.log(f"    [DEBUG] Window enumeration error (attempt {attempt+1}): {type(window_enum_error).__name__}")
                             continue
                     
                     if target_window:
-                        self.logger.log(f"    Found new window: {target_window.title[:50]}")
-                        x, y, width, height = self.get_field_bounds(base_config.monitor, base_config.position - 1, base_config.location_id)
-                        
                         try:
-                            if hasattr(target_window, 'isMaximized') and target_window.isMaximized:
-                                target_window.restore()
-                                time.sleep(0.1)
-                                
-                            target_window.moveTo(x, y)
-                            target_window.resizeTo(width, height)
-                            self.logger.log(f"    [POSITIONED] Successfully moved to Monitor {base_config.monitor}")
-                        except Exception as e:
-                            self.logger.log(f"    [WARNING] Could not move window: {e}")
+                            self.logger.log(f"    Found new window: {target_window.title[:50]}")
+                            x, y, width, height = self.get_field_bounds(base_config.monitor, base_config.position - 1, base_config.location_id)
+                            
+                            try:
+                                if hasattr(target_window, 'isMaximized') and target_window.isMaximized:
+                                    target_window.restore()
+                                    time.sleep(0.1)
+                                    
+                                target_window.moveTo(x, y)
+                                target_window.resizeTo(width, height)
+                                self.logger.log(f"    [POSITIONED] Successfully moved to Monitor {base_config.monitor}")
+                                enum_failures = 0  # Reset failure counter on success
+                            except Exception as move_error:
+                                self.logger.log(f"    [WARNING] Could not move window: {move_error}")
+                                enum_failures += 1
+                        except Exception as window_access_error:
+                            self.logger.log(f"    [WARNING] Could not access window properties: {window_access_error}")
+                            enum_failures += 1
                     else:
                         self.logger.log(f"    [WARNING] Could not detect any new window to position after 15 seconds.")
+                        enum_failures += 1
                 except Exception as window_error:
                     self.logger.log(f"    [WARNING] Window detection/positioning failed: {type(window_error).__name__}: {window_error}")
+                    enum_failures += 1
                 
                 self.logger.log("")
             except Exception as e:
