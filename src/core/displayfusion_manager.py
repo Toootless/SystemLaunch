@@ -260,6 +260,12 @@ if (w > 0) {{
                     
                     self._launch_program(base_config)
                 
+                # Skip window positioning for apps that request it (e.g., 3D graphics apps that crash window enumeration)
+                if base_config.skip_positioning:
+                    self.logger.log(f"    [LAUNCHED] on Monitor {base_config.monitor} ({display_name}) - Window positioning skipped per config")
+                    self.logger.log("")
+                    continue
+                
                 # Wait and poll for a new window to appear (up to 15 seconds)
                 target_window = None
                 try:

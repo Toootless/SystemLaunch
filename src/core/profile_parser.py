@@ -15,6 +15,7 @@ class AppConfig:
     location_id: str  # e.g., 'top-left', 'center', 'bottom-right'
     app_type: str    # 'chrome' or 'program'
     target: str      # URL or executable path
+    skip_positioning: bool = False  # Skip window positioning for this app (6th field, optional)
 
 
 class ProfileParser:
@@ -52,12 +53,19 @@ class ProfileParser:
                         app_type = parts[3].strip().lower()
                         target = parts[4].strip()
                         
+                        # Optional 6th field: skip_positioning flag
+                        skip_positioning = False
+                        if len(parts) >= 6:
+                            skip_flag = parts[5].strip().lower()
+                            skip_positioning = skip_flag in ('true', '1', 'yes', 'skip')
+                        
                         app = AppConfig(
                             monitor=monitor,
                             position=position,
                             location_id=location_id,
                             app_type=app_type,
-                            target=target
+                            target=target,
+                            skip_positioning=skip_positioning
                         )
                         apps.append(app)
                     
