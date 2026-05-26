@@ -214,10 +214,11 @@ if (w > 0) {{
         except ImportError:
             self.logger.log("WARNING: pygetwindow not available for window positioning")
             return
-            
-        # Group Chrome configs by (monitor, location_id) to combine tabs into one window
-        launch_groups = []
-        chrome_groups = {}
+        
+        try:
+            # Group Chrome configs by (monitor, location_id) to combine tabs into one window
+            launch_groups = []
+            chrome_groups = {}
         for config in app_configs:
             if config.app_type.lower() == "chrome":
                 key = (config.monitor, config.location_id)
@@ -235,6 +236,7 @@ if (w > 0) {{
 
         for i, (group_type, configs) in enumerate(launch_groups, 1):
             try:
+                self.logger.log(f"[DEBUG] Starting launch group {i}/{len(launch_groups)}")
                 base_config = configs[0]
                 display_name = self.DISPLAY_NAMES.get(base_config.monitor, f"DISPLAY{base_config.monitor}")
                 
@@ -274,8 +276,11 @@ if (w > 0) {{
                     else:
                         before_hwnds = set()
                     
+                    self.logger.log(f"    [DEBUG] Calling _launch_program for {base_config.target}")
                     self._launch_program(base_config)
+                    self.logger.log(f"    [DEBUG] _launch_program returned successfully")
                 
+                self.logger.log(f"    [DEBUG] Checking skip_this_app: {skip_this_app}")
                 # Skip window positioning for apps that request it
                 if skip_this_app:
                     if base_config.skip_positioning:
@@ -288,13 +293,19 @@ if (w > 0) {{
                     if enum_failures >= max_enum_failures_before_disable and not disable_positioning:
                         self.logger.log(f"[WARNING] Multiple window enumeration failures detected. Disabling positioning for remaining apps.")
                         disable_positioning = True
+                    
+                    self.logger.log(f"    [DEBUG] Skipping positioning, moving to next app")
                     continue
                 
+                self.logger.log(f"    [DEBUG] Checking if Chrome group: {group_type == 'chrome'}")
                 # Also skip window positioning for Chrome groups due to enumeration issues
                 if group_type == "chrome":
                     self.logger.log(f"    [LAUNCHED] Chrome group on Monitor {base_config.monitor} ({display_name}) - Window positioning skipped for Chrome")
                     self.logger.log("")
+                    self.logger.log(f"    [DEBUG] Chrome group skipped positioning, moving to next app")
                     continue
+                
+                self.logger.log(f"    [DEBUG] Starting window detection for {base_config.target}")
                 
                 # Wait and poll for a new window to appear (up to 15 seconds)
                 target_window = None
@@ -354,6 +365,12 @@ if (w > 0) {{
                 import traceback
                 self.logger.log(f"    [ERROR] {type(e).__name__}: {e}")
                 self.logger.log(f"    Traceback: {traceback.format_exc()}\n")
+        
+        except Exception as outer_e:
+            import traceback
+            self.logger.log(f"\n[CRITICAL ERROR] Launcher crashed during app launch:")
+            self.logger.log(f"    {type(outer_e).__name__}: {outer_e}")
+            self.logger.log(f"    Traceback: {traceback.format_exc()}\n")
 
     def _launch_chrome(self, config):
         """Launch a Chrome tab and position it."""
