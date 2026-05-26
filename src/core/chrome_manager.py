@@ -33,7 +33,9 @@ class ChromeManager:
             try:
                 print(f"    Opening Chrome: {self.chrome_path}")
                 import subprocess
-                subprocess.Popen([str(self.chrome_path), "--new-window", url])
+                # Disable session restore and infobars to prevent previous session tabs from loading
+                cmd = [str(self.chrome_path), "--new-window", "--disable-session-crashed-bubble", "--disable-infobars", url]
+                subprocess.Popen(cmd)
                 print(f"    Launched via subprocess")
                 return True
             except Exception as e:
@@ -49,7 +51,8 @@ class ChromeManager:
             try:
                 print(f"    Opening Chrome Group with {len(urls)} tabs: {self.chrome_path}")
                 import subprocess
-                cmd = [str(self.chrome_path), "--new-window"] + urls
+                # Disable session restore and infobars to prevent previous session tabs from loading
+                cmd = [str(self.chrome_path), "--new-window", "--disable-session-crashed-bubble", "--disable-infobars"] + urls
                 subprocess.Popen(cmd)
                 print(f"    Launched group via subprocess")
                 return True

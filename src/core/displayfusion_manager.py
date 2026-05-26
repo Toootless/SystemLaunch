@@ -290,6 +290,12 @@ if (w > 0) {{
                         disable_positioning = True
                     continue
                 
+                # Also skip window positioning for Chrome groups due to enumeration issues
+                if group_type == "chrome":
+                    self.logger.log(f"    [LAUNCHED] Chrome group on Monitor {base_config.monitor} ({display_name}) - Window positioning skipped for Chrome")
+                    self.logger.log("")
+                    continue
+                
                 # Wait and poll for a new window to appear (up to 15 seconds)
                 target_window = None
                 try:
