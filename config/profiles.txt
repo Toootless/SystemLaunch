@@ -49,9 +49,8 @@
 
 # Monitor 1 → DISPLAY6 (Left-Right Split)
 1,1,right,program,Ollama
-1,2,right,program,Bambu Studio.exe,skip
-1,3,left,program,WINWORD.exe
-1,4,left,chrome,https://home.google.com/u/0/home/1-fc87b653c48179496e0d930825cc5ece89b4091c2a313f071f658e5a8c493cc3/devices
+1,2,left,program,WINWORD.exe
+1,3,left,chrome,https://home.google.com/u/0/home/1-fc87b653c48179496e0d930825cc5ece89b4091c2a313f071f658e5a8c493cc3/devices
 
 
 # Monitor 2 → DISPLAY7 (2x3 Grid)
