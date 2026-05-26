@@ -239,7 +239,11 @@ if (w > 0) {{
                     self.logger.log(f"    Target: Monitor {base_config.monitor} ({display_name}), Location {base_config.location_id}")
                     
                     # Snapshot window handles before launch
-                    before_hwnds = {getattr(w, '_hWnd', None) for w in gw.getAllWindows()}
+                    try:
+                        before_hwnds = {getattr(w, '_hWnd', None) for w in gw.getAllWindows()}
+                    except Exception as e:
+                        self.logger.log(f"    [WARNING] Could not snapshot windows before launch: {e}")
+                        before_hwnds = set()
                     
                     # Launch all URLs in one command
                     self._launch_chrome_group(base_config, urls)
@@ -248,49 +252,63 @@ if (w > 0) {{
                     self.logger.log(f"    Target: Monitor {base_config.monitor} ({display_name}), Location {base_config.location_id}")
                     
                     # Snapshot window handles before launch
-                    before_hwnds = {getattr(w, '_hWnd', None) for w in gw.getAllWindows()}
+                    try:
+                        before_hwnds = {getattr(w, '_hWnd', None) for w in gw.getAllWindows()}
+                    except Exception as e:
+                        self.logger.log(f"    [WARNING] Could not snapshot windows before launch: {e}")
+                        before_hwnds = set()
                     
                     self._launch_program(base_config)
                 
                 # Wait and poll for a new window to appear (up to 15 seconds)
                 target_window = None
-                for _ in range(30):
-                    time.sleep(0.5)
-                    after_windows = gw.getAllWindows()
-                    new_windows = [w for w in after_windows if getattr(w, '_hWnd', None) not in before_hwnds]
-                    
-                    # Filter for visible, titled windows
-                    valid_new = [
-                        w for w in new_windows 
-                        if w.title.strip() 
-                        and "untitled" not in w.title.lower()
-                        and "webpage launcher" not in w.title.lower()
-                    ]
-                    
-                    if valid_new:
-                        target_window = valid_new[0]
-                        break
-                
-                if target_window:
-                    self.logger.log(f"    Found new window: {target_window.title[:50]}")
-                    x, y, width, height = self.get_field_bounds(base_config.monitor, base_config.position - 1, base_config.location_id)
-                    
-                    try:
-                        if hasattr(target_window, 'isMaximized') and target_window.isMaximized:
-                            target_window.restore()
-                            time.sleep(0.1)
+                try:
+                    for _ in range(30):
+                        try:
+                            time.sleep(0.5)
+                            after_windows = gw.getAllWindows()
+                            new_windows = [w for w in after_windows if getattr(w, '_hWnd', None) not in before_hwnds]
                             
-                        target_window.moveTo(x, y)
-                        target_window.resizeTo(width, height)
-                        self.logger.log(f"    [POSITIONED] Successfully moved to Monitor {base_config.monitor}")
-                    except Exception as e:
-                        self.logger.log(f"    [WARNING] Could not move window: {e}")
-                else:
-                    self.logger.log(f"    [WARNING] Could not detect any new window to position after 15 seconds.")
+                            # Filter for visible, titled windows
+                            valid_new = [
+                                w for w in new_windows 
+                                if w.title.strip() 
+                                and "untitled" not in w.title.lower()
+                                and "webpage launcher" not in w.title.lower()
+                            ]
+                            
+                            if valid_new:
+                                target_window = valid_new[0]
+                                break
+                        except Exception as window_enum_error:
+                            # Some applications (like Bambu Studio) can cause issues with window enumeration
+                            self.logger.log(f"    [DEBUG] Window enumeration error (iteration): {type(window_enum_error).__name__}")
+                            continue
+                    
+                    if target_window:
+                        self.logger.log(f"    Found new window: {target_window.title[:50]}")
+                        x, y, width, height = self.get_field_bounds(base_config.monitor, base_config.position - 1, base_config.location_id)
+                        
+                        try:
+                            if hasattr(target_window, 'isMaximized') and target_window.isMaximized:
+                                target_window.restore()
+                                time.sleep(0.1)
+                                
+                            target_window.moveTo(x, y)
+                            target_window.resizeTo(width, height)
+                            self.logger.log(f"    [POSITIONED] Successfully moved to Monitor {base_config.monitor}")
+                        except Exception as e:
+                            self.logger.log(f"    [WARNING] Could not move window: {e}")
+                    else:
+                        self.logger.log(f"    [WARNING] Could not detect any new window to position after 15 seconds.")
+                except Exception as window_error:
+                    self.logger.log(f"    [WARNING] Window detection/positioning failed: {type(window_error).__name__}: {window_error}")
                 
                 self.logger.log("")
             except Exception as e:
-                self.logger.log(f"    [ERROR] {e}\n")
+                import traceback
+                self.logger.log(f"    [ERROR] {type(e).__name__}: {e}")
+                self.logger.log(f"    Traceback: {traceback.format_exc()}\n")
 
     def _launch_chrome(self, config):
         """Launch a Chrome tab and position it."""
