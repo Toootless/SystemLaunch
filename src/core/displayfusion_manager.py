@@ -417,15 +417,20 @@ if (w > 0) {{
 
     def _launch_chrome_group(self, config, urls):
         """Launch a group of Chrome tabs in a single window and position it."""
-        from src.core.chrome_manager import ChromeManager
-        chrome_mgr = ChromeManager()
-        
-        display_name = self.DISPLAY_NAMES.get(config.monitor, f"DISPLAY{config.monitor}")
-        self.logger.log(f"    Opening Chrome Group with {len(urls)} tabs")
-        if chrome_mgr.open_url_group(urls):
-            self.logger.log(f"Opened Chrome Group ({len(urls)} tabs) on Monitor {config.monitor} ({display_name}), Location {config.location_id}")
-        else:
-            self.logger.log(f"    [WARNING] Failed to open Chrome group")
+        try:
+            from src.core.chrome_manager import ChromeManager
+            chrome_mgr = ChromeManager()
+            
+            display_name = self.DISPLAY_NAMES.get(config.monitor, f"DISPLAY{config.monitor}")
+            self.logger.log(f"    Opening Chrome Group with {len(urls)} tabs")
+            if chrome_mgr.open_url_group(urls):
+                self.logger.log(f"Opened Chrome Group ({len(urls)} tabs) on Monitor {config.monitor} ({display_name}), Location {config.location_id}")
+            else:
+                self.logger.log(f"    [WARNING] Failed to open Chrome group")
+        except Exception as e:
+            import traceback
+            self.logger.log(f"    [ERROR] Failed to launch Chrome group: {type(e).__name__}: {e}")
+            self.logger.log(f"    Traceback: {traceback.format_exc()}\n")
 
     def _launch_program(self, config):
         """Launch a program and position it."""
