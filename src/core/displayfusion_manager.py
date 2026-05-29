@@ -8,6 +8,26 @@ from typing import Dict, Tuple, Optional
 import json
 import tempfile
 from datetime import datetime
+import ctypes
+from ctypes import wintypes
+
+
+# Win32 constants for SetWindowPos
+SWP_NOACTIVATE = 0x0010
+SWP_NOZORDER = 0x0004
+HWND_TOP = 0
+
+def set_window_pos_win32(hwnd: int, x: int, y: int, width: int, height: int) -> bool:
+    """Set window position using Win32 SetWindowPos API."""
+    try:
+        SetWindowPos = ctypes.windll.user32.SetWindowPos
+        SetWindowPos.argtypes = [wintypes.HWND, wintypes.HWND, wintypes.INT, wintypes.INT, 
+                                 wintypes.INT, wintypes.INT, wintypes.UINT]
+        SetWindowPos.restype = wintypes.BOOL
+        result = SetWindowPos(hwnd, HWND_TOP, x, y, width, height, SWP_NOZORDER | SWP_NOACTIVATE)
+        return bool(result)
+    except Exception as e:
+        return False
 
 
 class LaunchLogger:
@@ -339,10 +359,21 @@ if (w > 0) {{
                                 if hasattr(target_window, 'isMaximized') and target_window.isMaximized:
                                     target_window.restore()
                                     time.sleep(0.1)
-                                    
-                                target_window.moveTo(x, y)
-                                target_window.resizeTo(width, height)
-                                self.logger.log(f"    [POSITIONED] Successfully moved to Monitor {base_config.monitor}")
+                                
+                                # Try pygetwindow first
+                                try:
+                                    target_window.moveTo(x, y)
+                                    target_window.resizeTo(width, height)
+                                    self.logger.log(f"    [POSITIONED] Successfully moved to Monitor {base_config.monitor} (pygetwindow)")
+                                except Exception as pygetwindow_error:
+                                    # Fallback to Win32 API if pygetwindow fails
+                                    self.logger.log(f"    [DEBUG] pygetwindow failed ({pygetwindow_error}), trying Win32 API...")
+                                    hwnd = getattr(target_window, '_hWnd', None)
+                                    if hwnd and set_window_pos_win32(hwnd, x, y, width, height):
+                                        self.logger.log(f"    [POSITIONED] Successfully moved to Monitor {base_config.monitor} (Win32 API)")
+                                    else:
+                                        raise Exception(f"Both pygetwindow and Win32 API failed. HWND={hwnd}")
+                                
                                 enum_failures = 0  # Reset failure counter on success
                             except Exception as move_error:
                                 self.logger.log(f"    [WARNING] Could not move window: {move_error}")
