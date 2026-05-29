@@ -78,6 +78,10 @@ class DisplayFusionManager:
             import screeninfo
             monitors = screeninfo.get_monitors()
             
+            self.logger.log(f"\n[DEBUG] Detected {len(monitors)} monitors via screeninfo")
+            for i, mon in enumerate(monitors):
+                self.logger.log(f"    Monitor {i}: {mon.name} - {mon.width}x{mon.height} @ ({mon.x}, {mon.y})")
+            
             # Map from Display Name (e.g. "DISPLAY6") to config ID (1-5)
             name_map = {v: k for k, v in self.DISPLAY_NAMES.items()}
             
@@ -93,6 +97,7 @@ class DisplayFusionManager:
                         "x": monitor.x,
                         "y": monitor.y,
                     }
+                    self.logger.log(f"    Mapped {name} (Monitor {mon_id}): x={monitor.x}, y={monitor.y}, w={monitor.width}, h={monitor.height}")
                     
             # Fallback for any monitor IDs that weren't found by name
             for i, monitor in enumerate(monitors, 1):
@@ -103,6 +108,7 @@ class DisplayFusionManager:
                         "x": monitor.x,
                         "y": monitor.y,
                     }
+                    self.logger.log(f"    Fallback Monitor {i}: x={monitor.x}, y={monitor.y}, w={monitor.width}, h={monitor.height}")
         except Exception as e:
             print(f"Error detecting monitors: {e}")
 
@@ -326,6 +332,8 @@ if (w > 0) {{
                         try:
                             self.logger.log(f"    Found new window: {target_window.title[:50]}")
                             x, y, width, height = self.get_field_bounds(base_config.monitor, base_config.position - 1, base_config.location_id)
+                            self.logger.log(f"    [DEBUG] Target position: x={x}, y={y}, w={width}, h={height}")
+                            self.logger.log(f"    [DEBUG] Monitor info: {self.monitor_info.get(base_config.monitor, 'NOT FOUND')}")
                             
                             try:
                                 if hasattr(target_window, 'isMaximized') and target_window.isMaximized:
