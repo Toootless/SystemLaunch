@@ -227,13 +227,11 @@ if (w > 0) {{
 
     def launch_apps(self, app_configs: list):
         """
-        Launch all applications.
+        Launch all applications and position them to target monitors.
         Groups Chrome tabs by monitor/location to keep them in the same window.
-        Window positioning is currently disabled while we fix the Chrome tab distribution.
         """
         self.logger.log(f"\n{'='*60}")
-        self.logger.log(f"Starting to launch {len(app_configs)} applications...")
-        self.logger.log(f"(Window positioning temporarily disabled for stability)")
+        self.logger.log(f"Starting to launch and position {len(app_configs)} applications...")
         self.logger.log(f"{'='*60}\n")
         
         try:
@@ -256,58 +254,45 @@ if (w > 0) {{
             else:
                 launch_groups.append(("program", [config]))
 
-        # Track consecutive window enumeration failures
-        enum_failures = 0
-        max_enum_failures_before_disable = 3
-        disable_positioning = False
-
         for i, (group_type, configs) in enumerate(launch_groups, 1):
             try:
                 base_config = configs[0]
                 display_name = self.DISPLAY_NAMES.get(base_config.monitor, f"DISPLAY{base_config.monitor}")
-                
-                # Check if this app has skip_positioning flag
-                skip_this_app = base_config.skip_positioning or disable_positioning
                 
                 if group_type == "chrome":
                     urls = [c.target for c in configs]
                     self.logger.log(f"[{i}/{len(launch_groups)}] Launching CHROME GROUP ({len(urls)} tabs)")
                     self.logger.log(f"    Target: Monitor {base_config.monitor} ({display_name}), Location {base_config.location_id}")
                     
-                    # Snapshot window handles before launch (unless skipping positioning)
-                    if not skip_this_app:
-                        try:
-                            before_hwnds = {getattr(w, '_hWnd', None) for w in gw.getAllWindows()}
-                        except Exception as e:
-                            self.logger.log(f"    [WARNING] Could not snapshot windows before launch: {e}")
-                            before_hwnds = set()
-                            enum_failures += 1
-                    else:
+                    # Snapshot windows before launch
+                    try:
+                        before_hwnds = {getattr(w, '_hWnd', None) for w in gw.getAllWindows()}
+                    except Exception as e:
                         before_hwnds = set()
                     
                     # Launch all URLs in one command
                     self._launch_chrome_group(base_config, urls)
+                    time.sleep(0.5)  # Brief pause for window to appear
                     
-                    # Note: Delay removed temporarily - was causing crashes
+                    # Position the new window
+                    self._position_window(base_config, before_hwnds, gw, time)
+                    
                 else:
                     self.logger.log(f"[{i}/{len(launch_groups)}] Launching PROGRAM: {base_config.target[:50]}")
                     self.logger.log(f"    Target: Monitor {base_config.monitor} ({display_name}), Location {base_config.location_id}")
                     
-                    # Snapshot window handles before launch (unless skipping positioning)
-                    if not skip_this_app:
-                        try:
-                            before_hwnds = {getattr(w, '_hWnd', None) for w in gw.getAllWindows()}
-                        except Exception as e:
-                            self.logger.log(f"    [WARNING] Could not snapshot windows before launch: {e}")
-                            before_hwnds = set()
-                            enum_failures += 1
-                    else:
+                    # Snapshot windows before launch
+                    try:
+                        before_hwnds = {getattr(w, '_hWnd', None) for w in gw.getAllWindows()}
+                    except Exception as e:
                         before_hwnds = set()
                     
                     self._launch_program(base_config)
+                    time.sleep(0.3)  # Brief pause for window to appear
+                    
+                    # Position the new window
+                    self._position_window(base_config, before_hwnds, gw, time)
                 
-                # Skip all window positioning for now (will be re-enabled after stability improvements)
-                self.logger.log(f"    [LAUNCHED] on Monitor {base_config.monitor} ({display_name}) - Positioning temporarily disabled")
                 self.logger.log("")
             except Exception as e:
                 import traceback
@@ -417,4 +402,70 @@ if (w > 0) {{
             self.logger.log(f"    [LAUNCHED] on Monitor {config.monitor} ({display_name}), Location {config.location_id}")
         except Exception as e:
             self.logger.log(f"    Exception: {e}")
+
+    def _position_window(self, config, before_hwnds, gw, time):
+        """Position a newly launched window to its target monitor and location."""
+        try:
+            display_name = self.DISPLAY_NAMES.get(config.monitor, f"DISPLAY{config.monitor}")
+            x, y, width, height = self.get_field_bounds(config.monitor, config.position - 1, config.location_id)
+            
+            # Try to find the new window (up to 3 seconds)
+            target_window = None
+            for attempt in range(6):
+                try:
+                    time.sleep(0.5)
+                    after_windows = gw.getAllWindows()
+                    new_windows = [w for w in after_windows if getattr(w, '_hWnd', None) not in before_hwnds]
+                    
+                    # Filter for visible, titled windows (ignore system windows and the launcher itself)
+                    valid_new = [
+                        w for w in new_windows 
+                        if w.title.strip() 
+                        and "untitled" not in w.title.lower()
+                        and "webpage launcher" not in w.title.lower()
+                    ]
+                    
+                    if valid_new:
+                        target_window = valid_new[0]
+                        break
+                except:
+                    continue
+            
+            if target_window:
+                try:
+                    self.logger.log(f"    Found window: {target_window.title[:50]}")
+                    self.logger.log(f"    Moving to: Monitor {config.monitor}, x={x}, y={y}, w={width}, h={height}")
+                    
+                    # Restore if maximized
+                    if hasattr(target_window, 'isMaximized') and target_window.isMaximized:
+                        target_window.restore()
+                        time.sleep(0.1)
+                    
+                    # Move and resize with error handling
+                    try:
+                        target_window.moveTo(x, y)
+                        target_window.resizeTo(width, height)
+                        self.logger.log(f"    [POSITIONED] to Monitor {config.monitor} ({display_name})")
+                    except PermissionError:
+                        # Chrome windows sometimes deny access, but they may still move
+                        self.logger.log(f"    [POSITIONED] (elevated access required, position may be approximate)")
+                    except Exception as move_err:
+                        # Try Win32 API as fallback
+                        hwnd = getattr(target_window, '_hWnd', None)
+                        if hwnd:
+                            try:
+                                if set_window_pos_win32(hwnd, x, y, width, height):
+                                    self.logger.log(f"    [POSITIONED] to Monitor {config.monitor} via Win32 API")
+                                else:
+                                    self.logger.log(f"    [WARNING] Win32 positioning returned False")
+                            except:
+                                self.logger.log(f"    [WARNING] Could not position window: {move_err}")
+                        else:
+                            self.logger.log(f"    [WARNING] Could not position window: {move_err}")
+                except Exception as pos_error:
+                    self.logger.log(f"    [WARNING] Could not position window: {pos_error}")
+            else:
+                self.logger.log(f"    [WARNING] Could not find new window to position")
+        except Exception as e:
+            self.logger.log(f"    [ERROR] Positioning failed: {e}")
 
