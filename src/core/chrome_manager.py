@@ -33,12 +33,26 @@ class ChromeManager:
         if self.chrome_path and self.chrome_path.exists():
             try:
                 print(f"    Opening Chrome: {self.chrome_path}")
-                # Use os.startfile to avoid UAC/elevation issues
-                # Properly quote the URL
-                args = f'--new-window --disable-session-crashed-bubble --disable-infobars "{url}"'
-                os.startfile(self.chrome_path, arguments=args)
-                print(f"    Launched via os.startfile()")
-                return True
+                args = [
+                    str(self.chrome_path),
+                    '--new-window',
+                    '--disable-session-crashed-bubble',
+                    '--disable-infobars',
+                    url
+                ]
+                
+                # Try subprocess first (more reliable)
+                try:
+                    subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    print(f"    Launched via subprocess.Popen()")
+                    return True
+                except (OSError, PermissionError) as e:
+                    # If we get permission error (WinError 740), fall back to os.startfile
+                    print(f"    [DEBUG] Subprocess failed: {e}, trying os.startfile()")
+                    args_str = f'--new-window --disable-session-crashed-bubble --disable-infobars "{url}"'
+                    os.startfile(self.chrome_path, arguments=args_str)
+                    print(f"    Launched via os.startfile() (fallback)")
+                    return True
             except Exception as e:
                 print(f"    Error: {e}")
                 return False
@@ -51,13 +65,28 @@ class ChromeManager:
         if self.chrome_path and self.chrome_path.exists():
             try:
                 print(f"    Opening Chrome Group with {len(urls)} tabs: {self.chrome_path}")
-                # Build arguments for Chrome - use os.startfile to avoid UAC/elevation issues
-                # Properly quote each URL to ensure they're all passed as separate arguments
-                quoted_urls = ' '.join(f'"{url}"' for url in urls)
-                args = f'--new-window --disable-session-crashed-bubble --disable-infobars {quoted_urls}'
-                os.startfile(self.chrome_path, arguments=args)
-                print(f"    Launched group via os.startfile()")
-                return True
+                # Build arguments for Chrome
+                # Use subprocess with shell=False to avoid shell interpretation issues
+                args = [
+                    str(self.chrome_path),
+                    '--new-window',
+                    '--disable-session-crashed-bubble',
+                    '--disable-infobars',
+                ] + list(urls)
+                
+                # Try subprocess first (more reliable)
+                try:
+                    subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    print(f"    Launched group via subprocess.Popen()")
+                    return True
+                except (OSError, PermissionError) as e:
+                    # If we get permission error (WinError 740), fall back to os.startfile
+                    print(f"    [DEBUG] Subprocess failed: {e}, trying os.startfile()")
+                    quoted_urls = ' '.join(f'"{url}"' for url in urls)
+                    args_str = f'--new-window --disable-session-crashed-bubble --disable-infobars {quoted_urls}'
+                    os.startfile(self.chrome_path, arguments=args_str)
+                    print(f"    Launched group via os.startfile() (fallback)")
+                    return True
             except Exception as e:
                 print(f"    Error: {e}")
                 return False
