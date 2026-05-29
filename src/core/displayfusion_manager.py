@@ -285,6 +285,10 @@ if (w > 0) {{
                     
                     # Launch all URLs in one command
                     self._launch_chrome_group(base_config, urls)
+                    
+                    # Add delay between Chrome launches to prevent window reuse
+                    import time
+                    time.sleep(1.5)
                 else:
                     self.logger.log(f"[{i}/{len(launch_groups)}] Launching PROGRAM: {base_config.target[:50]}")
                     self.logger.log(f"    Target: Monitor {base_config.monitor} ({display_name}), Location {base_config.location_id}")
@@ -325,19 +329,30 @@ if (w > 0) {{
                 # Wait and poll for a new window to appear (up to 15 seconds)
                 target_window = None
                 try:
-                    for attempt in range(30):
+                    # Chrome takes longer to launch, so wait up to 20 seconds for Chrome windows
+                    max_attempts = 40 if group_type == "chrome" else 30
+                    for attempt in range(max_attempts):
                         try:
                             time.sleep(0.5)
                             after_windows = gw.getAllWindows()
                             new_windows = [w for w in after_windows if getattr(w, '_hWnd', None) not in before_hwnds]
                             
-                            # Filter for visible, titled windows
-                            valid_new = [
-                                w for w in new_windows 
-                                if w.title.strip() 
-                                and "untitled" not in w.title.lower()
-                                and "webpage launcher" not in w.title.lower()
-                            ]
+                            # For Chrome groups, specifically look for Chrome windows
+                            if group_type == "chrome":
+                                valid_new = [
+                                    w for w in new_windows
+                                    if w.title.strip()
+                                    and any(keyword in w.title.lower() for keyword in ["chrome", "new tab", "localhost"])
+                                    and "webpage launcher" not in w.title.lower()
+                                ]
+                            else:
+                                # For regular programs, filter for visible, titled windows
+                                valid_new = [
+                                    w for w in new_windows 
+                                    if w.title.strip() 
+                                    and "untitled" not in w.title.lower()
+                                    and "webpage launcher" not in w.title.lower()
+                                ]
                             
                             if valid_new:
                                 target_window = valid_new[0]

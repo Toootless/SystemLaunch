@@ -34,8 +34,9 @@ class ChromeManager:
             try:
                 print(f"    Opening Chrome: {self.chrome_path}")
                 # Use os.startfile to avoid UAC/elevation issues
-                args = f'"{self.chrome_path}" --new-window --disable-session-crashed-bubble --disable-infobars "{url}"'
-                os.startfile(self.chrome_path, arguments=f'--new-window --disable-session-crashed-bubble --disable-infobars "{url}"')
+                # Properly quote the URL
+                args = f'--new-window --disable-session-crashed-bubble --disable-infobars "{url}"'
+                os.startfile(self.chrome_path, arguments=args)
                 print(f"    Launched via os.startfile()")
                 return True
             except Exception as e:
@@ -51,7 +52,9 @@ class ChromeManager:
             try:
                 print(f"    Opening Chrome Group with {len(urls)} tabs: {self.chrome_path}")
                 # Build arguments for Chrome - use os.startfile to avoid UAC/elevation issues
-                args = f'--new-window --disable-session-crashed-bubble --disable-infobars {" ".join(urls)}'
+                # Properly quote each URL to ensure they're all passed as separate arguments
+                quoted_urls = ' '.join(f'"{url}"' for url in urls)
+                args = f'--new-window --disable-session-crashed-bubble --disable-infobars {quoted_urls}'
                 os.startfile(self.chrome_path, arguments=args)
                 print(f"    Launched group via os.startfile()")
                 return True
