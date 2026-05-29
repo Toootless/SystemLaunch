@@ -265,10 +265,17 @@ if (w > 0) {{
                     self.logger.log(f"    Target: Monitor {base_config.monitor} ({display_name}), Location {base_config.location_id}")
                     
                     # Snapshot windows before launch
+                    before_hwnds = set()
                     try:
-                        before_hwnds = {getattr(w, '_hWnd', None) for w in gw.getAllWindows()}
-                    except Exception as e:
-                        before_hwnds = set()
+                        for w in gw.getAllWindows():
+                            try:
+                                hwnd = getattr(w, '_hWnd', None)
+                                if hwnd:
+                                    before_hwnds.add(hwnd)
+                            except (OSError, AttributeError):
+                                pass
+                    except Exception as snapshot_err:
+                        self.logger.log(f"    [WARNING] Could not snapshot windows: {type(snapshot_err).__name__}")
                     
                     # Launch all URLs in one command
                     self._launch_chrome_group(base_config, urls)
@@ -282,10 +289,17 @@ if (w > 0) {{
                     self.logger.log(f"    Target: Monitor {base_config.monitor} ({display_name}), Location {base_config.location_id}")
                     
                     # Snapshot windows before launch
+                    before_hwnds = set()
                     try:
-                        before_hwnds = {getattr(w, '_hWnd', None) for w in gw.getAllWindows()}
-                    except Exception as e:
-                        before_hwnds = set()
+                        for w in gw.getAllWindows():
+                            try:
+                                hwnd = getattr(w, '_hWnd', None)
+                                if hwnd:
+                                    before_hwnds.add(hwnd)
+                            except (OSError, AttributeError):
+                                pass
+                    except Exception as snapshot_err:
+                        self.logger.log(f"    [WARNING] Could not snapshot windows: {type(snapshot_err).__name__}")
                     
                     self._launch_program(base_config)
                     time.sleep(0.3)  # Brief pause for window to appear
@@ -414,21 +428,40 @@ if (w > 0) {{
             for attempt in range(6):
                 try:
                     time.sleep(0.5)
-                    after_windows = gw.getAllWindows()
-                    new_windows = [w for w in after_windows if getattr(w, '_hWnd', None) not in before_hwnds]
+                    try:
+                        after_windows = gw.getAllWindows()
+                    except OSError as pipe_error:
+                        # WinError 233: No process on other end of pipe - skip this attempt
+                        continue
+                    
+                    new_windows = []
+                    for w in after_windows:
+                        try:
+                            hwnd = getattr(w, '_hWnd', None)
+                            if hwnd not in before_hwnds:
+                                new_windows.append(w)
+                        except (OSError, AttributeError):
+                            # Window may have closed, skip it
+                            continue
                     
                     # Filter for visible, titled windows (ignore system windows and the launcher itself)
-                    valid_new = [
-                        w for w in new_windows 
-                        if w.title.strip() 
-                        and "untitled" not in w.title.lower()
-                        and "webpage launcher" not in w.title.lower()
-                    ]
+                    valid_new = []
+                    for w in new_windows:
+                        try:
+                            title = w.title.strip() if w.title else ""
+                            if (title 
+                                and "untitled" not in title.lower()
+                                and "webpage launcher" not in title.lower()):
+                                valid_new.append(w)
+                        except (OSError, AttributeError):
+                            # Window may have closed or title not accessible, skip it
+                            continue
                     
                     if valid_new:
                         target_window = valid_new[0]
                         break
-                except:
+                except Exception as inner_error:
+                    self.logger.log(f"    [DEBUG] Attempt {attempt+1} error: {type(inner_error).__name__}")
                     continue
             
             if target_window:
