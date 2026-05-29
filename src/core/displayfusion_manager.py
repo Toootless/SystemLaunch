@@ -227,11 +227,13 @@ if (w > 0) {{
 
     def launch_apps(self, app_configs: list):
         """
-        Launch all applications and position them immediately.
+        Launch all applications.
         Groups Chrome tabs by monitor/location to keep them in the same window.
+        Window positioning is currently disabled while we fix the Chrome tab distribution.
         """
         self.logger.log(f"\n{'='*60}")
-        self.logger.log(f"Starting to launch and position {len(app_configs)} applications...")
+        self.logger.log(f"Starting to launch {len(app_configs)} applications...")
+        self.logger.log(f"(Window positioning temporarily disabled for stability)")
         self.logger.log(f"{'='*60}\n")
         
         try:
@@ -286,9 +288,7 @@ if (w > 0) {{
                     # Launch all URLs in one command
                     self._launch_chrome_group(base_config, urls)
                     
-                    # Add delay between Chrome launches to prevent window reuse
-                    import time
-                    time.sleep(1.5)
+                    # Note: Delay removed temporarily - was causing crashes
                 else:
                     self.logger.log(f"[{i}/{len(launch_groups)}] Launching PROGRAM: {base_config.target[:50]}")
                     self.logger.log(f"    Target: Monitor {base_config.monitor} ({display_name}), Location {base_config.location_id}")
@@ -306,112 +306,8 @@ if (w > 0) {{
                     
                     self._launch_program(base_config)
                 
-                # Skip window positioning for apps that request it
-                if skip_this_app:
-                    if base_config.skip_positioning:
-                        self.logger.log(f"    [LAUNCHED] on Monitor {base_config.monitor} ({display_name}) - Window positioning skipped per config")
-                    else:
-                        self.logger.log(f"    [LAUNCHED] on Monitor {base_config.monitor} ({display_name}) - Window positioning disabled due to enumeration errors")
-                    self.logger.log("")
-                    
-                    # Check if we've had too many failures - if so, disable positioning for remaining apps
-                    if enum_failures >= max_enum_failures_before_disable and not disable_positioning:
-                        self.logger.log(f"[WARNING] Multiple window enumeration failures detected. Disabling positioning for remaining apps.")
-                        disable_positioning = True
-                    continue
-                
-                # Also skip window positioning for Chrome groups due to enumeration issues
-                if group_type == "chrome":
-                    self.logger.log(f"    [LAUNCHED] Chrome group on Monitor {base_config.monitor} ({display_name}) - Window positioning skipped for Chrome")
-                    self.logger.log("")
-                    continue
-                
-                # Wait and poll for a new window to appear (up to 15 seconds)
-                target_window = None
-                try:
-                    # Chrome takes longer to launch, so wait up to 20 seconds for Chrome windows
-                    max_attempts = 40 if group_type == "chrome" else 30
-                    for attempt in range(max_attempts):
-                        try:
-                            time.sleep(0.5)
-                            after_windows = gw.getAllWindows()
-                            new_windows = [w for w in after_windows if getattr(w, '_hWnd', None) not in before_hwnds]
-                            
-                            # For Chrome groups, specifically look for Chrome windows
-                            if group_type == "chrome":
-                                valid_new = [
-                                    w for w in new_windows
-                                    if w.title.strip()
-                                    and any(keyword in w.title.lower() for keyword in ["chrome", "new tab", "localhost"])
-                                    and "webpage launcher" not in w.title.lower()
-                                ]
-                            else:
-                                # For regular programs, filter for visible, titled windows
-                                valid_new = [
-                                    w for w in new_windows 
-                                    if w.title.strip() 
-                                    and "untitled" not in w.title.lower()
-                                    and "webpage launcher" not in w.title.lower()
-                                ]
-                            
-                            if valid_new:
-                                target_window = valid_new[0]
-                                break
-                        except Exception as window_enum_error:
-                            # Some applications (like Bambu Studio, Chrome) can cause issues with window enumeration
-                            if attempt % 5 == 0:  # Log every 5 attempts to reduce noise
-                                self.logger.log(f"    [DEBUG] Window enumeration error (attempt {attempt+1}): {type(window_enum_error).__name__}")
-                            continue
-                    
-                    if target_window:
-                        try:
-                            self.logger.log(f"    Found new window: {target_window.title[:50]}")
-                            x, y, width, height = self.get_field_bounds(base_config.monitor, base_config.position - 1, base_config.location_id)
-                            self.logger.log(f"    [DEBUG] Target position: x={x}, y={y}, w={width}, h={height}")
-                            self.logger.log(f"    [DEBUG] Monitor info: {self.monitor_info.get(base_config.monitor, 'NOT FOUND')}")
-                            
-                            try:
-                                if hasattr(target_window, 'isMaximized') and target_window.isMaximized:
-                                    target_window.restore()
-                                    time.sleep(0.1)
-                                
-                                # Try pygetwindow first
-                                try:
-                                    target_window.moveTo(x, y)
-                                    target_window.resizeTo(width, height)
-                                    self.logger.log(f"    [POSITIONED] Successfully moved to Monitor {base_config.monitor} (pygetwindow)")
-                                except Exception as pygetwindow_error:
-                                    # Fallback to Win32 API if pygetwindow fails
-                                    self.logger.log(f"    [DEBUG] pygetwindow failed ({pygetwindow_error}), trying Win32 API...")
-                                    hwnd = getattr(target_window, '_hWnd', None)
-                                    if hwnd:
-                                        try:
-                                            if set_window_pos_win32(hwnd, x, y, width, height):
-                                                self.logger.log(f"    [POSITIONED] Successfully moved to Monitor {base_config.monitor} (Win32 API)")
-                                            else:
-                                                self.logger.log(f"    [DEBUG] Win32 SetWindowPos returned False for HWND {hwnd}")
-                                                enum_failures += 1
-                                        except Exception as win32_error:
-                                            self.logger.log(f"    [DEBUG] Win32 API also failed: {win32_error}")
-                                            enum_failures += 1
-                                    else:
-                                        self.logger.log(f"    [DEBUG] Could not get HWND from window")
-                                        enum_failures += 1
-                                
-                                enum_failures = 0  # Reset failure counter on success
-                            except Exception as move_error:
-                                self.logger.log(f"    [WARNING] Could not position window: {move_error}")
-                                enum_failures += 1
-                        except Exception as window_access_error:
-                            self.logger.log(f"    [WARNING] Could not access window properties: {window_access_error}")
-                            enum_failures += 1
-                    else:
-                        self.logger.log(f"    [WARNING] Could not detect any new window to position after 15 seconds.")
-                        enum_failures += 1
-                except Exception as window_error:
-                    self.logger.log(f"    [WARNING] Window detection/positioning failed: {type(window_error).__name__}: {window_error}")
-                    enum_failures += 1
-                
+                # Skip all window positioning for now (will be re-enabled after stability improvements)
+                self.logger.log(f"    [LAUNCHED] on Monitor {base_config.monitor} ({display_name}) - Positioning temporarily disabled")
                 self.logger.log("")
             except Exception as e:
                 import traceback

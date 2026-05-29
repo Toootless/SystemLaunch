@@ -1,55 +1,98 @@
-[08:35:42] ============================================================
-[08:35:42] Webpage Launcher Started
-[08:35:42] ============================================================
-[08:35:42] 
+[08:44:51] ============================================================
+[08:44:51] Webpage Launcher Started
+[08:44:51] ============================================================
+[08:44:51] 
 [DEBUG] Detected 5 monitors via screeninfo
-[08:35:42]     Monitor 0: \\.\DISPLAY6 - 3840x1620 @ (7680, 537)
-[08:35:42]     Monitor 1: \\.\DISPLAY7 - 3840x2160 @ (-3840, 0)
-[08:35:42]     Monitor 2: \\.\DISPLAY2 - 5760x3240 @ (3744, -3240)
-[08:35:42]     Monitor 3: \\.\DISPLAY1 - 5760x3240 @ (-2038, -3240)
-[08:35:42]     Monitor 4: \\.\DISPLAY3 - 7680x2160 @ (0, 0)
-[08:35:42]     Mapped DISPLAY6 (Monitor 1): x=7680, y=537, w=3840, h=1620
-[08:35:42]     Mapped DISPLAY7 (Monitor 2): x=-3840, y=0, w=3840, h=2160
-[08:35:42]     Mapped DISPLAY2 (Monitor 4): x=3744, y=-3240, w=5760, h=3240
-[08:35:42]     Mapped DISPLAY1 (Monitor 3): x=-2038, y=-3240, w=5760, h=3240
-[08:35:42]     Mapped DISPLAY3 (Monitor 5): x=0, y=0, w=7680, h=2160
-[08:35:42] 
+[08:44:51]     Monitor 0: \\.\DISPLAY6 - 3840x1620 @ (7680, 537)
+[08:44:51]     Monitor 1: \\.\DISPLAY7 - 3840x2160 @ (-3840, 0)
+[08:44:51]     Monitor 2: \\.\DISPLAY2 - 5760x3240 @ (3744, -3240)
+[08:44:51]     Monitor 3: \\.\DISPLAY1 - 5760x3240 @ (-2038, -3240)
+[08:44:51]     Monitor 4: \\.\DISPLAY3 - 7680x2160 @ (0, 0)
+[08:44:51]     Mapped DISPLAY6 (Monitor 1): x=7680, y=537, w=3840, h=1620
+[08:44:51]     Mapped DISPLAY7 (Monitor 2): x=-3840, y=0, w=3840, h=2160
+[08:44:51]     Mapped DISPLAY2 (Monitor 4): x=3744, y=-3240, w=5760, h=3240
+[08:44:51]     Mapped DISPLAY1 (Monitor 3): x=-2038, y=-3240, w=5760, h=3240
+[08:44:51]     Mapped DISPLAY3 (Monitor 5): x=0, y=0, w=7680, h=2160
+[08:44:51] 
 ============================================================
-[08:35:42] Starting to launch and position 28 applications...
-[08:35:42] ============================================================
+[08:44:51] Starting to launch 28 applications...
+[08:44:51] (Window positioning temporarily disabled for stability)
+[08:44:51] ============================================================
 
-[08:35:42] [1/14] Launching PROGRAM: Ollama
-[08:35:42]     Target: Monitor 1 (DISPLAY6), Location right
-[08:35:42]     Searching for: Ollama
-[08:35:42]     Found in PATH: C:\Users\johnj\AppData\Local\AMD\AI_Bundle\Ollama\Ollama.EXE
-[08:35:42]     Launched via os.startfile()
-[08:35:42]     [LAUNCHED] on Monitor 1 (DISPLAY6), Location right
-[08:35:42]     Found new window: Terminal
-[08:35:42]     [DEBUG] Target position: x=9600, y=537, w=1920, h=1620
-[08:35:42]     [DEBUG] Monitor info: {'width': 3840, 'height': 1620, 'x': 7680, 'y': 537}
-[08:35:43]     [POSITIONED] Successfully moved to Monitor 1 (pygetwindow)
-[08:35:43] 
-[08:35:43] [2/14] Launching PROGRAM: WINWORD.exe
-[08:35:43]     Target: Monitor 1 (DISPLAY6), Location left
-[08:35:43]     Searching for: WINWORD.exe
-[08:35:43]     Not in PATH, checking common locations...
-[08:35:43]     Found at: C:\Program Files\Microsoft Office\root\Office16\WINWORD.exe
-[08:35:43]     Launched via os.startfile()
-[08:35:43]     [LAUNCHED] on Monitor 1 (DISPLAY6), Location left
-[08:35:44]     Found new window: Opening - Word
-[08:35:44]     [DEBUG] Target position: x=7680, y=537, w=1920, h=1620
-[08:35:44]     [DEBUG] Monitor info: {'width': 3840, 'height': 1620, 'x': 7680, 'y': 537}
-[08:35:44]     [POSITIONED] Successfully moved to Monitor 1 (pygetwindow)
-[08:35:44] 
-[08:35:44] [3/14] Launching CHROME GROUP (1 tabs)
-[08:35:44]     Target: Monitor 1 (DISPLAY6), Location left
-[08:35:44]     Opening Chrome Group with 1 tabs
-[08:35:44] Opened Chrome Group (1 tabs) on Monitor 1 (DISPLAY6), Location left
-[08:35:45]     Found new window: Word
-[08:35:45]     [DEBUG] Target position: x=7680, y=537, w=1920, h=1620
-[08:35:45]     [DEBUG] Monitor info: {'width': 3840, 'height': 1620, 'x': 7680, 'y': 537}
-[08:35:45]     [POSITIONED] Successfully moved to Monitor 1 (pygetwindow)
-[08:35:45] 
-[08:35:45] [4/14] Launching CHROME GROUP (1 tabs)
-[08:35:45]     Target: Monitor 2 (DISPLAY7), Location top-left
-[08:35:45]     Opening Chrome Group with 1 tabs
+[08:44:51] [1/14] Launching PROGRAM: Ollama
+[08:44:51]     Target: Monitor 1 (DISPLAY6), Location right
+[08:44:51]     Searching for: Ollama
+[08:44:51]     Found in PATH: C:\Users\johnj\AppData\Local\AMD\AI_Bundle\Ollama\Ollama.EXE
+[08:44:51]     Launched via os.startfile()
+[08:44:51]     [LAUNCHED] on Monitor 1 (DISPLAY6), Location right
+[08:44:51]     [LAUNCHED] on Monitor 1 (DISPLAY6) - Positioning temporarily disabled
+[08:44:51] 
+[08:44:51] [2/14] Launching PROGRAM: WINWORD.exe
+[08:44:51]     Target: Monitor 1 (DISPLAY6), Location left
+[08:44:51]     Searching for: WINWORD.exe
+[08:44:51]     Not in PATH, checking common locations...
+[08:44:51]     Found at: C:\Program Files\Microsoft Office\root\Office16\WINWORD.exe
+[08:44:51]     Launched via os.startfile()
+[08:44:51]     [LAUNCHED] on Monitor 1 (DISPLAY6), Location left
+[08:44:51]     [LAUNCHED] on Monitor 1 (DISPLAY6) - Positioning temporarily disabled
+[08:44:51] 
+[08:44:51] [3/14] Launching CHROME GROUP (1 tabs)
+[08:44:51]     Target: Monitor 1 (DISPLAY6), Location left
+[08:44:51]     Opening Chrome Group with 1 tabs
+[08:44:52] Opened Chrome Group (1 tabs) on Monitor 1 (DISPLAY6), Location left
+[08:44:52]     [LAUNCHED] on Monitor 1 (DISPLAY6) - Positioning temporarily disabled
+[08:44:52] 
+[08:44:52] [4/14] Launching CHROME GROUP (1 tabs)
+[08:44:52]     Target: Monitor 2 (DISPLAY7), Location top-left
+[08:44:52]     Opening Chrome Group with 1 tabs
+[08:44:52] Opened Chrome Group (1 tabs) on Monitor 2 (DISPLAY7), Location top-left
+[08:44:52]     [LAUNCHED] on Monitor 2 (DISPLAY7) - Positioning temporarily disabled
+[08:44:52] 
+[08:44:52] [5/14] Launching CHROME GROUP (1 tabs)
+[08:44:52]     Target: Monitor 2 (DISPLAY7), Location top-center
+[08:44:52]     Opening Chrome Group with 1 tabs
+[08:44:52] Opened Chrome Group (1 tabs) on Monitor 2 (DISPLAY7), Location top-center
+[08:44:52]     [LAUNCHED] on Monitor 2 (DISPLAY7) - Positioning temporarily disabled
+[08:44:52] 
+[08:44:52] [6/14] Launching CHROME GROUP (1 tabs)
+[08:44:52]     Target: Monitor 2 (DISPLAY7), Location top-right
+[08:44:52]     Opening Chrome Group with 1 tabs
+[08:44:53] Opened Chrome Group (1 tabs) on Monitor 2 (DISPLAY7), Location top-right
+[08:44:53]     [LAUNCHED] on Monitor 2 (DISPLAY7) - Positioning temporarily disabled
+[08:44:53] 
+[08:44:53] [7/14] Launching CHROME GROUP (1 tabs)
+[08:44:53]     Target: Monitor 2 (DISPLAY7), Location bottom-left
+[08:44:53]     Opening Chrome Group with 1 tabs
+[08:44:53] Opened Chrome Group (1 tabs) on Monitor 2 (DISPLAY7), Location bottom-left
+[08:44:53]     [LAUNCHED] on Monitor 2 (DISPLAY7) - Positioning temporarily disabled
+[08:44:53] 
+[08:44:53] [8/14] Launching CHROME GROUP (1 tabs)
+[08:44:53]     Target: Monitor 2 (DISPLAY7), Location bottom-center
+[08:44:53]     Opening Chrome Group with 1 tabs
+[08:44:53] Opened Chrome Group (1 tabs) on Monitor 2 (DISPLAY7), Location bottom-center
+[08:44:53]     [LAUNCHED] on Monitor 2 (DISPLAY7) - Positioning temporarily disabled
+[08:44:53] 
+[08:44:53] [9/14] Launching CHROME GROUP (1 tabs)
+[08:44:53]     Target: Monitor 2 (DISPLAY7), Location bottom-right
+[08:44:53]     Opening Chrome Group with 1 tabs
+[08:44:53] Opened Chrome Group (1 tabs) on Monitor 2 (DISPLAY7), Location bottom-right
+[08:44:53]     [LAUNCHED] on Monitor 2 (DISPLAY7) - Positioning temporarily disabled
+[08:44:53] 
+[08:44:53] [10/14] Launching CHROME GROUP (5 tabs)
+[08:44:53]     Target: Monitor 3 (DISPLAY1), Location center
+[08:44:53]     Opening Chrome Group with 5 tabs
+[08:44:54] Opened Chrome Group (5 tabs) on Monitor 3 (DISPLAY1), Location center
+[08:44:54]     [LAUNCHED] on Monitor 3 (DISPLAY1) - Positioning temporarily disabled
+[08:44:54] 
+[08:44:54] [11/14] Launching PROGRAM: Visual Studio Code.exe
+[08:44:54]     Target: Monitor 3 (DISPLAY1), Location center
+[08:44:54]     Searching for: Visual Studio Code.exe
+[08:44:54]     Not in PATH, checking common locations...
+[08:44:54]     Found at: C:\Users\johnj\AppData\Local\Programs\Microsoft VS Code\Code.exe
+[08:44:54]     Launched via os.startfile()
+[08:44:54]     [LAUNCHED] on Monitor 3 (DISPLAY1), Location center
+[08:44:54]     [LAUNCHED] on Monitor 3 (DISPLAY1) - Positioning temporarily disabled
+[08:44:54] 
+[08:44:54] [12/14] Launching CHROME GROUP (3 tabs)
+[08:44:54]     Target: Monitor 4 (DISPLAY2), Location center
+[08:44:54]     Opening Chrome Group with 3 tabs
