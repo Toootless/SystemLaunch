@@ -3,6 +3,7 @@ Chrome browser and tab management.
 """
 
 import subprocess
+import os
 from pathlib import Path
 
 
@@ -32,11 +33,10 @@ class ChromeManager:
         if self.chrome_path and self.chrome_path.exists():
             try:
                 print(f"    Opening Chrome: {self.chrome_path}")
-                import subprocess
-                # Disable session restore and infobars to prevent previous session tabs from loading
-                cmd = [str(self.chrome_path), "--new-window", "--disable-session-crashed-bubble", "--disable-infobars", url]
-                subprocess.Popen(cmd)
-                print(f"    Launched via subprocess")
+                # Use os.startfile to avoid UAC/elevation issues
+                args = f'"{self.chrome_path}" --new-window --disable-session-crashed-bubble --disable-infobars "{url}"'
+                os.startfile(self.chrome_path, arguments=f'--new-window --disable-session-crashed-bubble --disable-infobars "{url}"')
+                print(f"    Launched via os.startfile()")
                 return True
             except Exception as e:
                 print(f"    Error: {e}")
@@ -50,11 +50,10 @@ class ChromeManager:
         if self.chrome_path and self.chrome_path.exists():
             try:
                 print(f"    Opening Chrome Group with {len(urls)} tabs: {self.chrome_path}")
-                import subprocess
-                # Disable session restore and infobars to prevent previous session tabs from loading
-                cmd = [str(self.chrome_path), "--new-window", "--disable-session-crashed-bubble", "--disable-infobars"] + urls
-                subprocess.Popen(cmd)
-                print(f"    Launched group via subprocess")
+                # Build arguments for Chrome - use os.startfile to avoid UAC/elevation issues
+                args = f'--new-window --disable-session-crashed-bubble --disable-infobars {" ".join(urls)}'
+                os.startfile(self.chrome_path, arguments=args)
+                print(f"    Launched group via os.startfile()")
                 return True
             except Exception as e:
                 print(f"    Error: {e}")
@@ -69,14 +68,11 @@ class ChromeManager:
             print("Chrome not found on this system")
             return False
 
-        cmd = [str(self.chrome_path)]
-        if profile_name:
-            cmd.extend([f"--profile-directory={profile_name}"])
-
-        cmd.extend(urls)
+        args = f'--profile-directory={profile_name}' if profile_name else ""
+        args += f' {" ".join(urls)}'
 
         try:
-            subprocess.Popen(cmd)
+            os.startfile(self.chrome_path, arguments=args)
             return True
         except Exception as e:
             print(f"Error opening URLs in Chrome: {e}")

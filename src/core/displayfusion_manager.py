@@ -369,14 +369,23 @@ if (w > 0) {{
                                     # Fallback to Win32 API if pygetwindow fails
                                     self.logger.log(f"    [DEBUG] pygetwindow failed ({pygetwindow_error}), trying Win32 API...")
                                     hwnd = getattr(target_window, '_hWnd', None)
-                                    if hwnd and set_window_pos_win32(hwnd, x, y, width, height):
-                                        self.logger.log(f"    [POSITIONED] Successfully moved to Monitor {base_config.monitor} (Win32 API)")
+                                    if hwnd:
+                                        try:
+                                            if set_window_pos_win32(hwnd, x, y, width, height):
+                                                self.logger.log(f"    [POSITIONED] Successfully moved to Monitor {base_config.monitor} (Win32 API)")
+                                            else:
+                                                self.logger.log(f"    [DEBUG] Win32 SetWindowPos returned False for HWND {hwnd}")
+                                                enum_failures += 1
+                                        except Exception as win32_error:
+                                            self.logger.log(f"    [DEBUG] Win32 API also failed: {win32_error}")
+                                            enum_failures += 1
                                     else:
-                                        raise Exception(f"Both pygetwindow and Win32 API failed. HWND={hwnd}")
+                                        self.logger.log(f"    [DEBUG] Could not get HWND from window")
+                                        enum_failures += 1
                                 
                                 enum_failures = 0  # Reset failure counter on success
                             except Exception as move_error:
-                                self.logger.log(f"    [WARNING] Could not move window: {move_error}")
+                                self.logger.log(f"    [WARNING] Could not position window: {move_error}")
                                 enum_failures += 1
                         except Exception as window_access_error:
                             self.logger.log(f"    [WARNING] Could not access window properties: {window_access_error}")
@@ -412,10 +421,11 @@ if (w > 0) {{
         chrome_mgr = ChromeManager()
         
         display_name = self.DISPLAY_NAMES.get(config.monitor, f"DISPLAY{config.monitor}")
+        self.logger.log(f"    Opening Chrome Group with {len(urls)} tabs")
         if chrome_mgr.open_url_group(urls):
             self.logger.log(f"Opened Chrome Group ({len(urls)} tabs) on Monitor {config.monitor} ({display_name}), Location {config.location_id}")
         else:
-            self.logger.log(f"Failed to open Chrome group")
+            self.logger.log(f"    [WARNING] Failed to open Chrome group")
 
     def _launch_program(self, config):
         """Launch a program and position it."""
