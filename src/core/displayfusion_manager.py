@@ -8,6 +8,7 @@ from typing import Dict, Tuple, Optional
 import json
 import tempfile
 from datetime import datetime
+import os
 
 
 class LaunchLogger:
@@ -17,7 +18,7 @@ class LaunchLogger:
     
     def log(self, message: str):
         """Write message to log file."""
-        with open(self.log_file, "a") as f:
+        with open(self.log_file, "a", encoding="utf-8") as f:
             f.write(f"[{datetime.now().strftime('%H:%M:%S')}] {message}\n")
         print(message)
     
@@ -57,7 +58,30 @@ class DisplayFusionManager:
         
         self.displayfusion_path = self.find_displayfusion()
         self.monitor_info = {}
+        self.env = self._setup_gpu_environment()
         self.detect_monitors()
+
+    def _setup_gpu_environment(self) -> dict:
+        """Setup environment for GPU acceleration inheritance."""
+        env = os.environ.copy()
+        
+        # Log GPU environment variables that will be passed to child processes
+        gpu_vars = {
+            'VK_ICD_FILENAMES': 'Vulkan driver',
+            'DXVK_HUD': 'D3D11 diagnostics',
+            'VKDEVICE': 'Vulkan device',
+            'AMD_DEVICE_SPECS': 'AMD device info',
+            'DISABLE_LAYER_AMD_SWITCHABLE_GRAPHICS': 'AMD switchable graphics',
+        }
+        
+        self.logger.log(f"\nGPU Environment Setup:")
+        for var, desc in gpu_vars.items():
+            if var in os.environ:
+                self.logger.log(f"  [SET] {var}: {os.environ[var]}")
+            else:
+                self.logger.log(f"  [ - ] {var}: (not set)")
+        
+        return env
 
     def find_displayfusion(self) -> Optional[Path]:
         """Locate DisplayFusion executable."""
@@ -181,24 +205,28 @@ if (w > 0) {{
         self._position_windows(app_configs)
 
     def _launch_chrome(self, config):
-        """Launch a Chrome tab and position it."""
+        """Launch a Chrome tab with native positioning and GPU acceleration."""
         from src.core.chrome_manager import ChromeManager
         chrome_mgr = ChromeManager()
         
+        # Calculate the position for this Chrome window
+        x, y, width, height = self.get_field_bounds(config.monitor, config.position - 1, config.location_id)
+        
         display_name = self.DISPLAY_NAMES.get(config.monitor, f"DISPLAY{config.monitor}")
-        if chrome_mgr.open_url(config.target):
-            # Position the window (DisplayFusion will handle this)
+        
+        # Launch Chrome with positioning flags and GPU environment
+        if chrome_mgr.open_url_positioned(config.target, x, y, width, height):
             self.logger.log(f"Opened Chrome tab on Monitor {config.monitor} ({display_name}), Location {config.location_id}: {config.target[:60]}...")
+            self.logger.log(f"  Target positioning: ({x}, {y}) {width}x{height}")
         else:
             self.logger.log(f"Failed to open Chrome tab: {config.target}")
 
     def _launch_program(self, config):
-        """Launch a program and position it."""
+        """Launch a program and position it with inherited GPU environment."""
         x, y, width, height = self.get_field_bounds(config.monitor, config.position - 1, config.location_id)
         
         display_name = self.DISPLAY_NAMES.get(config.monitor, f"DISPLAY{config.monitor}")
         try:
-            import os
             import shutil
             
             # Try to find the program
@@ -209,16 +237,16 @@ if (w > 0) {{
             # Check if it's a full path
             if Path(program_name).exists():
                 self.logger.log(f"    Found at: {program_name}")
-                os.startfile(str(program_name))
-                self.logger.log(f"    Launched via os.startfile()")
+                # Use subprocess with inherited GPU environment instead of os.startfile
+                subprocess.Popen([str(program_name)], env=self.env)
+                self.logger.log(f"    Launched via subprocess with GPU env")
             else:
-                import shutil
                 # Try to find in PATH
                 found_path = shutil.which(program_name)
                 if found_path:
                     self.logger.log(f"    Found in PATH: {found_path}")
-                    os.startfile(str(found_path))
-                    self.logger.log(f"    Launched via os.startfile()")
+                    subprocess.Popen([str(found_path)], env=self.env)
+                    self.logger.log(f"    Launched via subprocess with GPU env")
                 else:
                     # Try common application paths with more thorough search
                     self.logger.log(f"    Not in PATH, checking common locations...")
@@ -245,8 +273,8 @@ if (w > 0) {{
                     for path in possible_paths:
                         if path and path.exists():
                             self.logger.log(f"    Found at: {path}")
-                            os.startfile(str(path))
-                            self.logger.log(f"    Launched via os.startfile()")
+                            subprocess.Popen([str(path)], env=self.env)
+                            self.logger.log(f"    Launched via subprocess with GPU env")
                             found = True
                             break
                     
@@ -262,69 +290,86 @@ if (w > 0) {{
     def _launch_without_displayfusion(self, app_configs: list):
         """Launch apps without DisplayFusion (fallback)."""
         from src.core.chrome_manager import ChromeManager
-        import subprocess
         
         chrome_mgr = ChromeManager()
         
         for config in app_configs:
             try:
+                x, y, width, height = self.get_field_bounds(config.monitor, config.position - 1, config.location_id)
                 if config.app_type.lower() == "chrome":
-                    chrome_mgr.open_url(config.target)
+                    # Use positioned launch for better GPU initialization
+                    chrome_mgr.open_url_positioned(config.target, x, y, width, height)
                 else:
-                    subprocess.Popen(config.target)
+                    subprocess.Popen([config.target], env=self.env)
             except Exception as e:
                 print(f"Error launching {config.target}: {e}")
     
     def _position_windows(self, app_configs: list):
         """Position all launched windows to their assigned monitors and locations."""
+        import time
+        
         try:
             import pygetwindow as gw
-            import time
         except ImportError:
-            self.logger.log("WARNING: pygetwindow not available for window positioning")
+            self.logger.log("ERROR: pygetwindow not available")
             return
+        
+        # Wait for windows to open
+        time.sleep(3)
+        
+        self.logger.log(f"\nPositioning windows to monitors...")
+        positioned_count = 0
+        positioned_hwnd_set = set()
         
         for config in app_configs:
             try:
                 x, y, width, height = self.get_field_bounds(config.monitor, config.position - 1, config.location_id)
-                
                 display_name = self.DISPLAY_NAMES.get(config.monitor, f"DISPLAY{config.monitor}")
-                self.logger.log(f"Positioning {config.app_type.upper()}: {config.target[:40]}")
-                self.logger.log(f"  Target: Monitor {config.monitor} ({display_name}), Location {config.location_id}")
-                self.logger.log(f"  Bounds: ({x}, {y}) {width}x{height}")
                 
-                # Find the window
-                windows = gw.getAllWindows()
                 target_window = None
                 
+                # Refresh window list for each config
+                all_windows = gw.getAllWindows()
+                
                 if config.app_type.lower() == "chrome":
-                    # For Chrome, look for window with URL title
-                    for win in windows:
-                        if "chrome" in win.title.lower() and len(win.title) > 10:
-                            # Skip if already positioned
-                            if win.left != 0 or win.top != 0:
-                                target_window = win
-                                break
+                    # Find Chrome windows not yet positioned
+                    chrome_windows = [
+                        w for w in all_windows 
+                        if w and w.visible and w._hWnd not in positioned_hwnd_set and
+                        any(keyword in w.title.lower() for keyword in ["chrome", "google", "untitled", "messenger", "gmail", "youtube", "spotify", "400 bad"])
+                    ]
+                    
+                    if chrome_windows:
+                        # Get the topmost Chrome window (most recently launched)
+                        target_window = min(chrome_windows, key=lambda w: (w.top, w.left))
                 else:
-                    # For programs, look for window with program name
-                    program_name = config.target
-                    for win in windows:
-                        if program_name.replace(".exe", "").lower() in win.title.lower():
+                    program_name = os.path.basename(config.target).replace(".exe", "").lower()
+                    for win in all_windows:
+                        if (win and win.visible and win._hWnd not in positioned_hwnd_set and
+                            program_name in win.title.lower()):
                             target_window = win
                             break
                 
                 if target_window:
-                    self.logger.log(f"  Found window: {target_window.title[:50]}")
+                    positioned_hwnd_set.add(target_window._hWnd)
+                    self.logger.log(f"  [{config.app_type.upper()}] {target_window.title[:40]}")
+                    self.logger.log(f"    Current: ({target_window.left}, {target_window.top}) {target_window.width}x{target_window.height}")
+                    self.logger.log(f"    Target: Monitor {config.monitor} ({display_name}) at ({x}, {y}) {width}x{height}")
+                    
                     try:
+                        # Move and resize using pygetwindow 
                         target_window.moveTo(x, y)
+                        time.sleep(0.05)
                         target_window.resizeTo(width, height)
-                        self.logger.log(f"  [POSITIONED] to Monitor {config.monitor}")
+                        positioned_count += 1
+                        self.logger.log(f"    [OK] Positioned via pygetwindow")
                     except Exception as e:
-                        self.logger.log(f"  Could not position: {e}")
+                        self.logger.log(f"    [SKIP] {str(e)[:50]}")
                 else:
-                    self.logger.log(f"  Window not found")
-                
-                self.logger.log("")
-                
+                    # Don't log NOT FOUND for Chrome - there may be more windows
+                    pass
+                    
             except Exception as e:
-                self.logger.log(f"  Error positioning: {e}\n")
+                self.logger.log(f"  [ERROR] {str(e)[:50]}")
+        
+        self.logger.log(f"\n[RESULT] Positioned {positioned_count}/{len(app_configs)} windows")
