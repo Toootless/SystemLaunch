@@ -180,58 +180,54 @@ class ChromeCDPSession:
     # Lifecycle
     # ------------------------------------------------------------------
 
-    def launch_chrome(self, chrome_path: Path, gpu_flags: list, env: dict,
-                      first_url: str, first_x: int, first_y: int,
-                      first_w: int, first_h: int) -> bool:
+    def launch_chrome(self, chrome_path: Path, gpu_flags: list) -> bool:
         """
-        Launch Chrome fresh (Chrome must NOT already be running when called).
-        The first window respects --window-position because no other Chrome
-        process is running to intercept the launch.  All subsequent windows go
-        through CDP.
+        Launch Chrome headlessly (--no-startup-window) with the DevTools debug
+        port.  Uses os.startfile so the child process is spawned via
+        ShellExecuteEx ("open" verb), which de-elevates even when Python is
+        running elevated — this is required for Chrome's DevTools HTTP server
+        to bind on 127.0.0.1:9222.
+        CDP will create every window; no URL needed at launch time.
         """
-        cmd = [
-            str(chrome_path),
+        flags = [
             f"--remote-debugging-port={self.PORT}",
             "--no-first-run",
             "--no-default-browser-check",
-            # Required when Chrome is launched from an elevated (admin) process:
-            # without --no-sandbox the DevTools HTTP server silently fails to bind.
-            "--no-sandbox",
-            f"--window-position={first_x},{first_y}",
-            f"--window-size={first_w},{first_h}",
-        ] + list(gpu_flags) + [first_url]
-
-        # Do NOT use shell=True — it breaks URLs containing & (shell separator)
-        try:
-            subprocess.Popen(cmd, env=env)
-        except PermissionError as exc:
-            if getattr(exc, "winerror", None) == 740:
-                raise RuntimeError(
-                    "Chrome requires elevated privileges to launch.\n"
-                    "Run the launcher via WebpageLauncher.bat (as Administrator)."
-                ) from exc
-            raise
+            "--no-startup-window",
+            "--disable-session-crashed-bubble",
+        ] + list(gpu_flags)
+        args_str = " ".join(flags)
+        # ShellExecuteEx "open" from an elevated process routes through
+        # explorer.exe and uses the interactive user's standard (non-admin)
+        # token — exactly how the legacy os.startfile() fallback works.
+        os.startfile(str(chrome_path), "open", args_str)
         return True
 
-    def wait_for_port(self, timeout: float = 15.0) -> bool:
+    def wait_for_port(self, timeout: float = 15.0, log=None) -> bool:
         """Block until Chrome's debug HTTP endpoint is reachable."""
         deadline = time.time() + timeout
         first_err: str | None = None
         while time.time() < deadline:
             try:
                 urllib.request.urlopen(
-                    f"http://localhost:{self.PORT}/json/version", timeout=1
+                    f"http://127.0.0.1:{self.PORT}/json/version", timeout=1
                 )
-                if first_err:
-                    print(f"  [CDP] Port {self.PORT} became ready (was: {first_err})")
                 return True
             except Exception as e:
                 err = f"{type(e).__name__}: {e}"
                 if first_err is None:
                     first_err = err
-                    print(f"  [CDP] Waiting for port {self.PORT} — {err}")
+                    msg = f"  [CDP] Waiting for port {self.PORT} — {err}"
+                    if log:
+                        log(msg)
+                    else:
+                        print(msg)
                 time.sleep(0.3)
-        print(f"  [CDP] wait_for_port timed out — last error: {first_err}")
+        msg = f"  [CDP] wait_for_port timed out — last error: {first_err}"
+        if log:
+            log(msg)
+        else:
+            print(msg)
         return False
 
     def connect(self) -> bool:
@@ -239,21 +235,21 @@ class ChromeCDPSession:
         try:
             data = json.loads(
                 urllib.request.urlopen(
-                    f"http://localhost:{self.PORT}/json/version", timeout=5
+                    f"http://127.0.0.1:{self.PORT}/json/version", timeout=5
                 ).read()
             )
             ws_url = data["webSocketDebuggerUrl"]
-            # ws://localhost:PORT/devtools/browser/<guid>
-            path = ws_url.split(f"localhost:{self.PORT}")[1]
+            # ws://127.0.0.1:PORT/devtools/browser/<guid>
+            path = ws_url.split(f":{self.PORT}")[1]
 
             self._sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self._sock.settimeout(10)
-            self._sock.connect(("localhost", self.PORT))
+            self._sock.connect(("127.0.0.1", self.PORT))
 
             key = base64.b64encode(os.urandom(16)).decode()
             handshake = (
                 f"GET {path} HTTP/1.1\r\n"
-                f"Host: localhost:{self.PORT}\r\n"
+                f"Host: 127.0.0.1:{self.PORT}\r\n"
                 f"Upgrade: websocket\r\n"
                 f"Connection: Upgrade\r\n"
                 f"Sec-WebSocket-Key: {key}\r\n"

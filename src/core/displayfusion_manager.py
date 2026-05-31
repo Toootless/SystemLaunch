@@ -299,42 +299,33 @@ if (w > 0) {{
                 self.logger.log(
                     "  WARNING: Chrome still running after 12 s — launching anyway")
 
-            first  = chrome_configs[0]
-            x0, y0, w0, h0 = self.get_field_bounds(
-                first.monitor, first.position - 1, first.location_id)
-            dn0 = self.DISPLAY_NAMES.get(first.monitor, f"DISPLAY{first.monitor}")
+            cdp.launch_chrome(chrome_mgr.chrome_path, chrome_mgr.GPU_FLAGS)
+            self.logger.log("  Chrome launched headless — waiting for debug port...")
 
-            cdp.launch_chrome(chrome_mgr.chrome_path, chrome_mgr.GPU_FLAGS,
-                              self.env, first.target, x0, y0, w0, h0)
-            self.logger.log(
-                f"  [1/{len(chrome_configs)}] Monitor {first.monitor} ({dn0})"
-                f" ({x0},{y0}) {w0}x{h0} — launched via subprocess (first window)")
-
-            # Confirm Chrome process is actually alive before polling the port
+            # Confirm Chrome is alive 1 s after launch
             _time.sleep(1.0)
             alive = subprocess.run(
                 ["tasklist", "/FI", "IMAGENAME eq chrome.exe"],
                 capture_output=True, text=True
             )
             self.logger.log(
-                f"  Chrome alive after launch: "
-                f"{'YES' if 'chrome.exe' in alive.stdout.lower() else 'NO — process exited!'}")
+                f"  Chrome alive: "
+                f"{'YES' if 'chrome.exe' in alive.stdout.lower() else 'NO — crashed!'}")
 
-            self.logger.log("  Waiting for Chrome debug port...")
-            if not cdp.wait_for_port(timeout=30):
-                self.logger.log("[CDP] Timeout — falling back to subprocess for remaining")
-                for config in chrome_configs[1:]:
+            if not cdp.wait_for_port(timeout=30, log=self.logger.log):
+                self.logger.log("[CDP] Timeout — falling back to subprocess for all")
+                for config in chrome_configs:
                     self._launch_chrome(config)
                 return
 
             if not cdp.connect():
                 self.logger.log("[CDP] Connection failed — falling back to subprocess")
-                for config in chrome_configs[1:]:
+                for config in chrome_configs:
                     self._launch_chrome(config)
                 return
 
-            configs_to_open = chrome_configs[1:]
-            start_idx = 2
+            configs_to_open = chrome_configs
+            start_idx = 1
 
         self.logger.log("  [CDP] Connected to Chrome DevTools Protocol")
 
