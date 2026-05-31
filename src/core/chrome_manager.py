@@ -194,6 +194,9 @@ class ChromeCDPSession:
             f"--remote-debugging-port={self.PORT}",
             "--no-first-run",
             "--no-default-browser-check",
+            # Required when Chrome is launched from an elevated (admin) process:
+            # without --no-sandbox the DevTools HTTP server silently fails to bind.
+            "--no-sandbox",
             f"--window-position={first_x},{first_y}",
             f"--window-size={first_w},{first_h}",
         ] + list(gpu_flags) + [first_url]
@@ -213,14 +216,22 @@ class ChromeCDPSession:
     def wait_for_port(self, timeout: float = 15.0) -> bool:
         """Block until Chrome's debug HTTP endpoint is reachable."""
         deadline = time.time() + timeout
+        first_err: str | None = None
         while time.time() < deadline:
             try:
                 urllib.request.urlopen(
                     f"http://localhost:{self.PORT}/json/version", timeout=1
                 )
+                if first_err:
+                    print(f"  [CDP] Port {self.PORT} became ready (was: {first_err})")
                 return True
-            except Exception:
+            except Exception as e:
+                err = f"{type(e).__name__}: {e}"
+                if first_err is None:
+                    first_err = err
+                    print(f"  [CDP] Waiting for port {self.PORT} — {err}")
                 time.sleep(0.3)
+        print(f"  [CDP] wait_for_port timed out — last error: {first_err}")
         return False
 
     def connect(self) -> bool:

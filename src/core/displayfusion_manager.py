@@ -310,6 +310,16 @@ if (w > 0) {{
                 f"  [1/{len(chrome_configs)}] Monitor {first.monitor} ({dn0})"
                 f" ({x0},{y0}) {w0}x{h0} — launched via subprocess (first window)")
 
+            # Confirm Chrome process is actually alive before polling the port
+            _time.sleep(1.0)
+            alive = subprocess.run(
+                ["tasklist", "/FI", "IMAGENAME eq chrome.exe"],
+                capture_output=True, text=True
+            )
+            self.logger.log(
+                f"  Chrome alive after launch: "
+                f"{'YES' if 'chrome.exe' in alive.stdout.lower() else 'NO — process exited!'}")
+
             self.logger.log("  Waiting for Chrome debug port...")
             if not cdp.wait_for_port(timeout=30):
                 self.logger.log("[CDP] Timeout — falling back to subprocess for remaining")
