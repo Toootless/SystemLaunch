@@ -60,8 +60,16 @@ class ChromeManager:
             print(f"    Chrome NOT found. Tried: {self.chrome_path}")
             return False
 
-    def open_url_group(self, urls):
-        """Open multiple URLs as tabs in a single new Chrome window."""
+    def open_url_group(self, urls, window_x=None, window_y=None, window_width=None, window_height=None):
+        """Open multiple URLs as tabs in a single new Chrome window.
+        
+        Args:
+            urls: List of URLs to open as tabs
+            window_x: X coordinate for window position
+            window_y: Y coordinate for window position
+            window_width: Width of window
+            window_height: Height of window
+        """
         if self.chrome_path and self.chrome_path.exists():
             try:
                 print(f"    Opening Chrome Group with {len(urls)} tabs: {self.chrome_path}")
@@ -72,7 +80,15 @@ class ChromeManager:
                     '--new-window',
                     '--disable-session-crashed-bubble',
                     '--disable-infobars',
-                ] + list(urls)
+                ]
+                
+                # Add window position and size if provided
+                if window_x is not None and window_y is not None:
+                    args.append(f'--window-position={window_x},{window_y}')
+                if window_width is not None and window_height is not None:
+                    args.append(f'--window-size={window_width},{window_height}')
+                
+                args.extend(list(urls))
                 
                 # Try subprocess first (more reliable)
                 try:
@@ -83,7 +99,12 @@ class ChromeManager:
                     # If we get permission error (WinError 740), fall back to os.startfile
                     print(f"    [DEBUG] Subprocess failed: {e}, trying os.startfile()")
                     quoted_urls = ' '.join(f'"{url}"' for url in urls)
-                    args_str = f'--new-window --disable-session-crashed-bubble --disable-infobars {quoted_urls}'
+                    pos_args = ""
+                    if window_x is not None and window_y is not None:
+                        pos_args += f' --window-position={window_x},{window_y}'
+                    if window_width is not None and window_height is not None:
+                        pos_args += f' --window-size={window_width},{window_height}'
+                    args_str = f'--new-window --disable-session-crashed-bubble --disable-infobars{pos_args} {quoted_urls}'
                     os.startfile(self.chrome_path, arguments=args_str)
                     print(f"    Launched group via os.startfile() (fallback)")
                     return True

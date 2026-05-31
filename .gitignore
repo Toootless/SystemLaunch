@@ -36,3 +36,6 @@ env/
 config/profiles/
 .env
 *.log
+launch_log.txt
+test_profiles.txt
+test_word.py

@@ -80,9 +80,9 @@
 5,3,left,chrome,https://messages.google.com/web/conversations
 5,4,left,chrome,https://www.detroitnews.com/
 5,5,left,chrome,https://www.freep.com/
-5,5,left,chrome,https://www.linkedin.com/feed/
+5,6,left,chrome,https://www.linkedin.com/feed/
 
-5,6,right,chrome,https://gemini.google.com/app
-5,7,right,chrome,https://calendar.google.com/calendar/u/0/r
-5,8,right,chrome,https://www.facebook.com/messages
-5,9,right,chrome,https://www.facebook.com/
+5,7,right,chrome,https://gemini.google.com/app
+5,8,right,chrome,https://calendar.google.com/calendar/u/0/r
+5,9,right,chrome,https://www.facebook.com/messages
+5,10,right,chrome,https://www.facebook.com/

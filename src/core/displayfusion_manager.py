@@ -10,22 +10,44 @@ import tempfile
 from datetime import datetime
 import ctypes
 from ctypes import wintypes
+import traceback
 
 
 # Win32 constants for SetWindowPos
 SWP_NOACTIVATE = 0x0010
 SWP_NOZORDER = 0x0004
+SWP_FRAMECHANGED = 0x0020
+SWP_SHOWWINDOW = 0x0040
 HWND_TOP = 0
+SW_RESTORE = 9
+SW_SHOWNORMAL = 1
 
 def set_window_pos_win32(hwnd: int, x: int, y: int, width: int, height: int) -> bool:
     """Set window position using Win32 SetWindowPos API."""
     try:
-        SetWindowPos = ctypes.windll.user32.SetWindowPos
+        user32 = ctypes.windll.user32
+        
+        # First restore the window if it's minimized or maximized
+        user32.ShowWindow(hwnd, SW_RESTORE)
+        
+        SetWindowPos = user32.SetWindowPos
         SetWindowPos.argtypes = [wintypes.HWND, wintypes.HWND, wintypes.INT, wintypes.INT, 
                                  wintypes.INT, wintypes.INT, wintypes.UINT]
         SetWindowPos.restype = wintypes.BOOL
-        result = SetWindowPos(hwnd, HWND_TOP, x, y, width, height, SWP_NOZORDER | SWP_NOACTIVATE)
-        return bool(result)
+        result = SetWindowPos(hwnd, HWND_TOP, x, y, width, height, SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED)
+        if result:
+            return True
+        
+        # Fallback: try MoveWindow which is simpler and often works where SetWindowPos doesn't
+        MoveWindow = user32.MoveWindow
+        MoveWindow.argtypes = [wintypes.HWND, wintypes.INT, wintypes.INT, wintypes.INT, wintypes.INT, wintypes.BOOL]
+        MoveWindow.restype = wintypes.BOOL
+        result2 = MoveWindow(hwnd, x, y, width, height, True)
+        if result2:
+            return True
+        
+        err = ctypes.GetLastError()
+        return False
     except Exception as e:
         return False
 
@@ -282,7 +304,13 @@ if (w > 0) {{
                     time.sleep(1.5)  # Wait for Chrome to fully start and render
                     
                     # Position the new window
-                    self._position_window(base_config, before_hwnds, gw, time)
+                    try:
+                        self._position_window(base_config, before_hwnds, gw, time)
+                    except Exception as pos_err:
+                        msg = f"    [ERROR] Position window failed: {type(pos_err).__name__}: {pos_err}"
+                        print(msg)
+                        self.logger.log(msg)
+                        self.logger.log(f"    Traceback: {traceback.format_exc()}")
                     
                 else:
                     self.logger.log(f"[{i}/{len(launch_groups)}] Launching PROGRAM: {base_config.target[:50]}")
@@ -302,15 +330,22 @@ if (w > 0) {{
                         self.logger.log(f"    [WARNING] Could not snapshot windows: {type(snapshot_err).__name__}")
                     
                     self._launch_program(base_config)
-                    time.sleep(0.8)  # Wait for program window to appear
+                    time.sleep(3.0)  # Wait longer for programs to create main window
                     
                     # Position the new window
-                    self._position_window(base_config, before_hwnds, gw, time)
+                    try:
+                        self._position_window(base_config, before_hwnds, gw, time)
+                    except Exception as pos_err:
+                        msg = f"    [ERROR] Position window failed: {type(pos_err).__name__}: {pos_err}"
+                        print(msg)
+                        self.logger.log(msg)
+                        self.logger.log(f"    Traceback: {traceback.format_exc()}")
                 
                 self.logger.log("")
             except Exception as e:
-                import traceback
-                self.logger.log(f"    [ERROR] {type(e).__name__}: {e}")
+                msg = f"    [ERROR] {type(e).__name__}: {e}"
+                print(msg)
+                self.logger.log(msg)
                 self.logger.log(f"    Traceback: {traceback.format_exc()}\n")
 
     def _launch_chrome(self, config):
@@ -326,14 +361,19 @@ if (w > 0) {{
             self.logger.log(f"Failed to open Chrome tab: {config.target}")
 
     def _launch_chrome_group(self, config, urls):
-        """Launch a group of Chrome tabs in a single window and position it."""
+        """Launch a group of Chrome tabs in a single window with position specified at launch."""
         try:
             from src.core.chrome_manager import ChromeManager
             chrome_mgr = ChromeManager()
             
+            # Get the target position on the monitor
+            x, y, width, height = self.get_field_bounds(config.monitor, config.position - 1, config.location_id)
+            
             display_name = self.DISPLAY_NAMES.get(config.monitor, f"DISPLAY{config.monitor}")
             self.logger.log(f"    Opening Chrome Group with {len(urls)} tabs")
-            if chrome_mgr.open_url_group(urls):
+            self.logger.log(f"    Position: x={x}, y={y}, w={width}, h={height}")
+            
+            if chrome_mgr.open_url_group(urls, window_x=x, window_y=y, window_width=width, window_height=height):
                 self.logger.log(f"Opened Chrome Group ({len(urls)} tabs) on Monitor {config.monitor} ({display_name}), Location {config.location_id}")
             else:
                 self.logger.log(f"    [WARNING] Failed to open Chrome group")
@@ -341,6 +381,41 @@ if (w > 0) {{
             import traceback
             self.logger.log(f"    [ERROR] Failed to launch Chrome group: {type(e).__name__}: {e}")
             self.logger.log(f"    Traceback: {traceback.format_exc()}\n")
+
+    def _is_process_running(self, program_name: str) -> bool:
+        """Check if a process with a matching executable name is already running."""
+        try:
+            import psutil
+            search = Path(program_name).stem.lower()  # e.g. 'ollama', 'winword', 'code'
+            for proc in psutil.process_iter(['name']):
+                try:
+                    proc_stem = Path(proc.info['name']).stem.lower()
+                    if proc_stem == search:
+                        return True
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    continue
+        except ImportError:
+            pass
+        return False
+
+    def _start_exe(self, path: str) -> str:
+        """Launch an executable detached from our console so child signals can't kill us.
+        Returns 'subprocess' or 'startfile' indicating which method succeeded."""
+        import subprocess
+        flags = subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS
+        try:
+            subprocess.Popen(
+                [path],
+                creationflags=flags,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            return "subprocess"
+        except (OSError, PermissionError):
+            import os
+            os.startfile(path)
+            return "startfile"
 
     def _launch_program(self, config):
         """Launch a program and position it."""
@@ -355,20 +430,26 @@ if (w > 0) {{
             # Try to find the program
             program_name = config.target
             
+            # Check if already running — skip launch to avoid duplicate or crash
+            if self._is_process_running(program_name):
+                self.logger.log(f"    [ALREADY RUNNING] {program_name} — skipping launch")
+                self.logger.log(f"    [LAUNCHED] on Monitor {config.monitor} ({display_name}), Location {config.location_id}")
+                return
+
             self.logger.log(f"    Searching for: {program_name}")
             
             # Check if it's a full path
             if Path(program_name).exists():
                 self.logger.log(f"    Found at: {program_name}")
-                os.startfile(str(program_name))
-                self.logger.log(f"    Launched via os.startfile()")
+                method = self._start_exe(str(program_name))
+                self.logger.log(f"    Launched via {method}")
             else:
                 # Try to find in PATH
                 found_path = shutil.which(program_name)
                 if found_path:
                     self.logger.log(f"    Found in PATH: {found_path}")
-                    os.startfile(str(found_path))
-                    self.logger.log(f"    Launched via os.startfile()")
+                    method = self._start_exe(str(found_path))
+                    self.logger.log(f"    Launched via {method}")
                 else:
                     # Try common application paths with more thorough search
                     self.logger.log(f"    Not in PATH, checking common locations...")
@@ -403,8 +484,8 @@ if (w > 0) {{
                     for path in possible_paths:
                         if path and path.exists():
                             self.logger.log(f"    Found at: {path}")
-                            os.startfile(str(path))
-                            self.logger.log(f"    Launched via os.startfile()")
+                            method = self._start_exe(str(path))
+                            self.logger.log(f"    Launched via {method}")
                             found = True
                             break
                     
@@ -423,11 +504,11 @@ if (w > 0) {{
             display_name = self.DISPLAY_NAMES.get(config.monitor, f"DISPLAY{config.monitor}")
             x, y, width, height = self.get_field_bounds(config.monitor, config.position - 1, config.location_id)
             
-            # Try to find the new window (up to 2 seconds with shorter intervals)
+            # Try to find the new window (up to 6 seconds with shorter intervals)
             target_window = None
-            for attempt in range(4):
+            for attempt in range(12):
                 try:
-                    time.sleep(0.3)  # Shorter sleep since we already waited before calling this
+                    time.sleep(0.5)  # Wait for window to appear and stabilize
                     try:
                         after_windows = gw.getAllWindows()
                     except OSError as pipe_error:
@@ -462,8 +543,24 @@ if (w > 0) {{
                         target_window = valid_new[0]
                         self.logger.log(f"    [DEBUG] Found window on attempt {attempt+1}")
                         break
-                    elif attempt < 3:
-                        self.logger.log(f"    [DEBUG] Attempt {attempt+1}: No new window yet, {len(after_windows)} total windows")
+                    else:
+                        # If no window found yet, also consider very short-titled windows (like WINWORD temporary windows)
+                        fallback_windows = []
+                        for w in new_windows:
+                            try:
+                                title = w.title.strip() if w.title else ""
+                                # Accept windows with empty or very short titles
+                                if len(title) == 0 or (len(title) < 50 and "webpage launcher" not in title.lower()):
+                                    fallback_windows.append(w)
+                            except (OSError, AttributeError):
+                                continue
+                        
+                        if fallback_windows:
+                            target_window = fallback_windows[0]
+                            self.logger.log(f"    [DEBUG] Found window on attempt {attempt+1} (fallback match)")
+                            break
+                        elif attempt < 3:
+                            self.logger.log(f"    [DEBUG] Attempt {attempt+1}: No new window yet, {len(after_windows)} total windows")
                 except Exception as inner_error:
                     self.logger.log(f"    [DEBUG] Attempt {attempt+1} error: {type(inner_error).__name__}: {inner_error}")
                     continue
@@ -475,17 +572,25 @@ if (w > 0) {{
                     
                     hwnd = getattr(target_window, '_hWnd', None)
                     
-                    # Try Win32 API first (most reliable for non-Chrome)
                     if hwnd:
-                        try:
-                            result = set_window_pos_win32(hwnd, x, y, width, height)
-                            if result:
-                                self.logger.log(f"    [POSITIONED] to Monitor {config.monitor} ({display_name}) - Win32 success")
+                        # Wait a moment for Chrome to finish its own startup positioning, then override it
+                        time.sleep(0.8)
+                        result = set_window_pos_win32(hwnd, x, y, width, height)
+                        if result:
+                            self.logger.log(f"    [POSITIONED] to Monitor {config.monitor} ({display_name}) - Win32 success")
+                            return
+                        else:
+                            err = ctypes.GetLastError()
+                            self.logger.log(f"    [DEBUG] Win32 failed (error {err}), retrying after delay...")
+                            # Retry after longer delay - Chrome restores saved window position on startup
+                            time.sleep(1.5)
+                            result2 = set_window_pos_win32(hwnd, x, y, width, height)
+                            if result2:
+                                self.logger.log(f"    [POSITIONED] to Monitor {config.monitor} ({display_name}) - Win32 retry success")
                                 return
                             else:
-                                self.logger.log(f"    [DEBUG] Win32 returned False, trying pygetwindow...")
-                        except Exception as win32_err:
-                            self.logger.log(f"    [DEBUG] Win32 API error: {win32_err}")
+                                err2 = ctypes.GetLastError()
+                                self.logger.log(f"    [DEBUG] Win32 retry failed (error {err2}), trying pygetwindow...")
                     
                     # Fallback to pygetwindow if Win32 failed or returned False
                     try:
