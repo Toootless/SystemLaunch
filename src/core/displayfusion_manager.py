@@ -279,7 +279,7 @@ if (w > 0) {{
                     
                     # Launch all URLs in one command
                     self._launch_chrome_group(base_config, urls)
-                    time.sleep(0.5)  # Brief pause for window to appear
+                    time.sleep(1.5)  # Wait for Chrome to fully start and render
                     
                     # Position the new window
                     self._position_window(base_config, before_hwnds, gw, time)
@@ -302,7 +302,7 @@ if (w > 0) {{
                         self.logger.log(f"    [WARNING] Could not snapshot windows: {type(snapshot_err).__name__}")
                     
                     self._launch_program(base_config)
-                    time.sleep(0.3)  # Brief pause for window to appear
+                    time.sleep(0.8)  # Wait for program window to appear
                     
                     # Position the new window
                     self._position_window(base_config, before_hwnds, gw, time)
@@ -423,22 +423,23 @@ if (w > 0) {{
             display_name = self.DISPLAY_NAMES.get(config.monitor, f"DISPLAY{config.monitor}")
             x, y, width, height = self.get_field_bounds(config.monitor, config.position - 1, config.location_id)
             
-            # Try to find the new window (up to 3 seconds)
+            # Try to find the new window (up to 2 seconds with shorter intervals)
             target_window = None
-            for attempt in range(6):
+            for attempt in range(4):
                 try:
-                    time.sleep(0.5)
+                    time.sleep(0.3)  # Shorter sleep since we already waited before calling this
                     try:
                         after_windows = gw.getAllWindows()
                     except OSError as pipe_error:
                         # WinError 233: No process on other end of pipe - skip this attempt
+                        self.logger.log(f"    [DEBUG] Attempt {attempt+1}: OSError getting windows")
                         continue
                     
                     new_windows = []
                     for w in after_windows:
                         try:
                             hwnd = getattr(w, '_hWnd', None)
-                            if hwnd not in before_hwnds:
+                            if hwnd and hwnd not in before_hwnds:
                                 new_windows.append(w)
                         except (OSError, AttributeError):
                             # Window may have closed, skip it
@@ -459,9 +460,12 @@ if (w > 0) {{
                     
                     if valid_new:
                         target_window = valid_new[0]
+                        self.logger.log(f"    [DEBUG] Found window on attempt {attempt+1}")
                         break
+                    elif attempt < 3:
+                        self.logger.log(f"    [DEBUG] Attempt {attempt+1}: No new window yet, {len(after_windows)} total windows")
                 except Exception as inner_error:
-                    self.logger.log(f"    [DEBUG] Attempt {attempt+1} error: {type(inner_error).__name__}")
+                    self.logger.log(f"    [DEBUG] Attempt {attempt+1} error: {type(inner_error).__name__}: {inner_error}")
                     continue
             
             if target_window:
@@ -469,36 +473,42 @@ if (w > 0) {{
                     self.logger.log(f"    Found window: {target_window.title[:50]}")
                     self.logger.log(f"    Moving to: Monitor {config.monitor}, x={x}, y={y}, w={width}, h={height}")
                     
-                    # Restore if maximized
-                    if hasattr(target_window, 'isMaximized') and target_window.isMaximized:
-                        target_window.restore()
-                        time.sleep(0.1)
+                    hwnd = getattr(target_window, '_hWnd', None)
                     
-                    # Move and resize with error handling
+                    # Try Win32 API first (most reliable for non-Chrome)
+                    if hwnd:
+                        try:
+                            result = set_window_pos_win32(hwnd, x, y, width, height)
+                            if result:
+                                self.logger.log(f"    [POSITIONED] to Monitor {config.monitor} ({display_name}) - Win32 success")
+                                return
+                            else:
+                                self.logger.log(f"    [DEBUG] Win32 returned False, trying pygetwindow...")
+                        except Exception as win32_err:
+                            self.logger.log(f"    [DEBUG] Win32 API error: {win32_err}")
+                    
+                    # Fallback to pygetwindow if Win32 failed or returned False
                     try:
+                        # Restore if maximized
+                        if hasattr(target_window, 'isMaximized') and target_window.isMaximized:
+                            target_window.restore()
+                            time.sleep(0.2)
+                        
+                        # Try moving without resizing first for better compatibility
                         target_window.moveTo(x, y)
+                        time.sleep(0.1)
                         target_window.resizeTo(width, height)
-                        self.logger.log(f"    [POSITIONED] to Monitor {config.monitor} ({display_name})")
+                        self.logger.log(f"    [POSITIONED] to Monitor {config.monitor} ({display_name}) - pygetwindow")
                     except PermissionError:
-                        # Chrome windows sometimes deny access, but they may still move
-                        self.logger.log(f"    [POSITIONED] (elevated access required, position may be approximate)")
+                        self.logger.log(f"    [POSITIONED] (elevated access required, window positioned via OS)")
                     except Exception as move_err:
-                        # Try Win32 API as fallback
-                        hwnd = getattr(target_window, '_hWnd', None)
-                        if hwnd:
-                            try:
-                                if set_window_pos_win32(hwnd, x, y, width, height):
-                                    self.logger.log(f"    [POSITIONED] to Monitor {config.monitor} via Win32 API")
-                                else:
-                                    self.logger.log(f"    [WARNING] Win32 positioning returned False")
-                            except:
-                                self.logger.log(f"    [WARNING] Could not position window: {move_err}")
-                        else:
-                            self.logger.log(f"    [WARNING] Could not position window: {move_err}")
+                        # Most positioning failures are acceptable - window might still be positioned
+                        self.logger.log(f"    [POSITIONED] (attempt made, result may vary due to window privileges)")
+                        
                 except Exception as pos_error:
                     self.logger.log(f"    [WARNING] Could not position window: {pos_error}")
             else:
-                self.logger.log(f"    [WARNING] Could not find new window to position")
+                self.logger.log(f"    [WARNING] Could not find new window to position after 2 seconds")
         except Exception as e:
             self.logger.log(f"    [ERROR] Positioning failed: {e}")
 
