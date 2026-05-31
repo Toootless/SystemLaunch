@@ -185,38 +185,161 @@ if (w > 0) {{
 
     def launch_apps(self, app_configs: list):
         """
-        Launch all applications using DisplayFusion.
-        
-        Args:
-            app_configs: List of AppConfig objects
+        Launch all applications.
+
+        Programs are launched immediately in order.
+        Chrome windows are collected and then launched together via CDP so that
+        every window gets exact positioning via Browser.setWindowBounds — no
+        UIPI / Access Denied issues, and no URL-breaking from shell=True.
         """
         self.logger.log(f"\n{'='*60}")
         self.logger.log(f"Starting to launch {len(app_configs)} applications...")
         self.logger.log(f"{'='*60}\n")
-        
-        if not self.displayfusion_path:
-            self.logger.log("WARNING: DisplayFusion not found. Using fallback launch mode.")
-        
+
+        program_configs = []
+        chrome_configs  = []
+
         for i, config in enumerate(app_configs, 1):
             try:
                 self.logger.log(f"[{i}/{len(app_configs)}] Launching {config.app_type.upper()}: {config.target}")
                 if config.app_type.lower() == "chrome":
-                    self._launch_chrome(config)
+                    x, y, w, h = self.get_field_bounds(
+                        config.monitor, config.position - 1, config.location_id)
+                    display_name = self.DISPLAY_NAMES.get(
+                        config.monitor, f"DISPLAY{config.monitor}")
+                    self.logger.log(
+                        f"  Queued for CDP: Monitor {config.monitor} ({display_name})"
+                        f" at ({x},{y}) {w}x{h}")
+                    chrome_configs.append(config)
                 else:
                     self._launch_program(config)
+                    program_configs.append(config)
                 self.logger.log(f"  [OK] Success\n")
             except Exception as e:
                 self.logger.log(f"  [ERROR] {e}\n")
-        
-        # After all apps launched, position windows
+
+        # ── Chrome via CDP ────────────────────────────────────────────
+        if chrome_configs:
+            self._launch_chrome_via_cdp(chrome_configs)
+
+        # ── Position program windows ─────────────────────────────────
+        if program_configs:
+            self.logger.log(f"\n{'='*60}")
+            self.logger.log("Positioning program windows to monitors...")
+            self.logger.log(f"{'='*60}\n")
+            import time
+            time.sleep(2)
+            self._position_windows(program_configs)
+
+    def _launch_chrome_via_cdp(self, chrome_configs: list):
+        """
+        Launch all Chrome windows using Chrome DevTools Protocol.
+
+        Strategy (never kills existing Chrome):
+          1. If Chrome already has --remote-debugging-port=9222 active, connect
+             and open ALL windows via CDP.
+          2. If Chrome is running WITHOUT the debug port, fall back to the old
+             subprocess method so existing sessions are preserved.
+          3. If Chrome is not running at all, launch it fresh with the first URL
+             and correct --window-position, then open the rest via CDP.
+
+        A 0.5 s pause between creations prevents Chrome from killing tabs due
+        to simultaneous memory pressure.
+        """
+        import time as _time
+        from src.core.chrome_manager import ChromeManager, ChromeCDPSession
+
+        chrome_mgr = ChromeManager()
+        if not chrome_mgr.chrome_path or not chrome_mgr.chrome_path.exists():
+            self.logger.log("[CDP] Chrome not found — falling back to subprocess")
+            for config in chrome_configs:
+                self._launch_chrome(config)
+            return
+
         self.logger.log(f"\n{'='*60}")
-        self.logger.log("Positioning windows to monitors...")
+        self.logger.log(f"Launching {len(chrome_configs)} Chrome windows via CDP...")
         self.logger.log(f"{'='*60}\n")
-        
-        import time
-        time.sleep(2)  # Give apps time to open
-        
-        self._position_windows(app_configs)
+
+        cdp = ChromeCDPSession()
+
+        # ── Case 1: Chrome already running with debug port ─────────────────
+        if cdp.wait_for_port(timeout=1.5):
+            self.logger.log("  [CDP] Debug port already active — using existing Chrome")
+            if not cdp.connect():
+                self.logger.log("[CDP] Connection failed — falling back to subprocess")
+                for config in chrome_configs:
+                    self._launch_chrome(config)
+                return
+            configs_to_open = chrome_configs
+            start_idx = 1
+
+        else:
+            # ── Case 2: Chrome running without debug port ──────────────────
+            proc_check = subprocess.run(
+                ["tasklist", "/FI", "IMAGENAME eq chrome.exe"],
+                capture_output=True, text=True
+            )
+            if "chrome.exe" in proc_check.stdout.lower():
+                self.logger.log(
+                    "[CDP] Chrome is running without debug port — "
+                    "using subprocess fallback (existing Chrome preserved)")
+                for config in chrome_configs:
+                    self._launch_chrome(config)
+                return
+
+            # ── Case 3: Chrome is not running — launch fresh ───────────────
+            first  = chrome_configs[0]
+            x0, y0, w0, h0 = self.get_field_bounds(
+                first.monitor, first.position - 1, first.location_id)
+            dn0 = self.DISPLAY_NAMES.get(first.monitor, f"DISPLAY{first.monitor}")
+
+            cdp.launch_chrome(chrome_mgr.chrome_path, chrome_mgr.GPU_FLAGS,
+                              self.env, first.target, x0, y0, w0, h0)
+            self.logger.log(
+                f"  [1/{len(chrome_configs)}] Monitor {first.monitor} ({dn0})"
+                f" ({x0},{y0}) {w0}x{h0} — launched via subprocess (first window)")
+
+            self.logger.log("  Waiting for Chrome debug port...")
+            if not cdp.wait_for_port(timeout=15):
+                self.logger.log("[CDP] Timeout — falling back to subprocess for remaining")
+                for config in chrome_configs[1:]:
+                    self._launch_chrome(config)
+                return
+
+            if not cdp.connect():
+                self.logger.log("[CDP] Connection failed — falling back to subprocess")
+                for config in chrome_configs[1:]:
+                    self._launch_chrome(config)
+                return
+
+            configs_to_open = chrome_configs[1:]
+            start_idx = 2
+
+        self.logger.log("  [CDP] Connected to Chrome DevTools Protocol")
+
+        try:
+            for idx, config in enumerate(configs_to_open, start_idx):
+                x, y, w, h = self.get_field_bounds(
+                    config.monitor, config.position - 1, config.location_id)
+                dn = self.DISPLAY_NAMES.get(config.monitor, f"DISPLAY{config.monitor}")
+
+                if cdp.open_window_at(config.target, x, y, w, h):
+                    self.logger.log(
+                        f"  [{idx}/{len(chrome_configs)}] Monitor {config.monitor}"
+                        f" ({dn}) ({x},{y}) {w}x{h} — [OK]")
+                else:
+                    self.logger.log(
+                        f"  [{idx}/{len(chrome_configs)}] CDP failed for"
+                        f" {config.target[:50]} — falling back to subprocess")
+                    self._launch_chrome(config)
+
+                _time.sleep(0.5)  # Stagger to prevent Chrome OOM tab kills
+        finally:
+            cdp.close()
+
+        self.logger.log(f"\n[CDP] All {len(chrome_configs)} Chrome windows launched")
+
+
 
     def _launch_chrome(self, config):
         """Launch a Chrome tab with native positioning and GPU acceleration."""
