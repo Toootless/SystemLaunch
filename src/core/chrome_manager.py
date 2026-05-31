@@ -199,7 +199,15 @@ class ChromeCDPSession:
         ] + list(gpu_flags) + [first_url]
 
         # Do NOT use shell=True — it breaks URLs containing & (shell separator)
-        subprocess.Popen(cmd, env=env)
+        try:
+            subprocess.Popen(cmd, env=env)
+        except PermissionError as exc:
+            if getattr(exc, "winerror", None) == 740:
+                raise RuntimeError(
+                    "Chrome requires elevated privileges to launch.\n"
+                    "Run the launcher via WebpageLauncher.bat (as Administrator)."
+                ) from exc
+            raise
         return True
 
     def wait_for_port(self, timeout: float = 15.0) -> bool:

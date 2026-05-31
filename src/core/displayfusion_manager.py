@@ -235,13 +235,13 @@ if (w > 0) {{
         """
         Launch all Chrome windows using Chrome DevTools Protocol.
 
-        Strategy (never kills existing Chrome):
+        Strategy:
           1. If Chrome already has --remote-debugging-port=9222 active, connect
-             and open ALL windows via CDP.
-          2. If Chrome is running WITHOUT the debug port, fall back to the old
-             subprocess method so existing sessions are preserved.
-          3. If Chrome is not running at all, launch it fresh with the first URL
-             and correct --window-position, then open the rest via CDP.
+             and open ALL windows via CDP (no kill needed).
+          2. Otherwise: kill any stale Chrome background processes and launch
+             Chrome fresh with the debug port.  This is the correct behaviour
+             for a startup launcher — stale background-mode Chrome has no user
+             sessions worth preserving.
 
         A 0.5 s pause between creations prevents Chrome from killing tabs due
         to simultaneous memory pressure.
@@ -274,20 +274,31 @@ if (w > 0) {{
             start_idx = 1
 
         else:
-            # ── Case 2: Chrome running without debug port ──────────────────
-            proc_check = subprocess.run(
-                ["tasklist", "/FI", "IMAGENAME eq chrome.exe"],
-                capture_output=True, text=True
-            )
-            if "chrome.exe" in proc_check.stdout.lower():
-                self.logger.log(
-                    "[CDP] Chrome is running without debug port — "
-                    "using subprocess fallback (existing Chrome preserved)")
-                for config in chrome_configs:
-                    self._launch_chrome(config)
-                return
+            # ── Case 2: Kill any stale Chrome, launch fresh with debug port ─
+            # Chrome's single-instance model silently forwards a new launch to
+            # an existing chrome.exe, which means --remote-debugging-port is
+            # ignored and port 9222 never opens.  We must verify Chrome is
+            # completely dead before launching our debug-port instance.
+            self.logger.log("  Killing stale Chrome processes...")
+            subprocess.run(["taskkill", "/F", "/IM", "chrome.exe"],
+                           capture_output=True)
 
-            # ── Case 3: Chrome is not running — launch fresh ───────────────
+            kill_deadline = _time.time() + 12.0
+            while _time.time() < kill_deadline:
+                _time.sleep(0.5)
+                check = subprocess.run(
+                    ["tasklist", "/FI", "IMAGENAME eq chrome.exe"],
+                    capture_output=True, text=True
+                )
+                if "chrome.exe" not in check.stdout.lower():
+                    self.logger.log("  Chrome fully terminated — launching fresh")
+                    break
+                subprocess.run(["taskkill", "/F", "/IM", "chrome.exe"],
+                               capture_output=True)
+            else:
+                self.logger.log(
+                    "  WARNING: Chrome still running after 12 s — launching anyway")
+
             first  = chrome_configs[0]
             x0, y0, w0, h0 = self.get_field_bounds(
                 first.monitor, first.position - 1, first.location_id)
@@ -300,7 +311,7 @@ if (w > 0) {{
                 f" ({x0},{y0}) {w0}x{h0} — launched via subprocess (first window)")
 
             self.logger.log("  Waiting for Chrome debug port...")
-            if not cdp.wait_for_port(timeout=15):
+            if not cdp.wait_for_port(timeout=30):
                 self.logger.log("[CDP] Timeout — falling back to subprocess for remaining")
                 for config in chrome_configs[1:]:
                     self._launch_chrome(config)
