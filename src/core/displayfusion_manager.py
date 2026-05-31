@@ -97,17 +97,31 @@ class DisplayFusionManager:
         return None
 
     def detect_monitors(self):
-        """Detect connected monitors and their dimensions."""
+        """Detect connected monitors and their dimensions.
+        
+        Maps each physical display to the correct monitor ID using DISPLAY_NAMES,
+        rather than relying on the arbitrary order screeninfo returns monitors.
+        screeninfo may return monitors as e.g. DISPLAY6, DISPLAY1, DISPLAY7, DISPLAY2, DISPLAY3
+        instead of in order, which would cause wrong monitor assignments if using enumerate().
+        """
         try:
             import screeninfo
             monitors = screeninfo.get_monitors()
-            for i, monitor in enumerate(monitors, 1):
-                self.monitor_info[i] = {
-                    "width": monitor.width,
-                    "height": monitor.height,
-                    "x": monitor.x,
-                    "y": monitor.y,
-                }
+            # Build reverse map: "DISPLAY6" -> 1, "DISPLAY7" -> 2, etc.
+            name_map = {v: k for k, v in self.DISPLAY_NAMES.items()}
+            for monitor in monitors:
+                # screeninfo names include the "\\.\" prefix on Windows - strip it
+                name = monitor.name.replace("\\\\.\\", "") if monitor.name else ""
+                if name in name_map:
+                    mon_id = name_map[name]
+                    self.monitor_info[mon_id] = {
+                        "width": monitor.width,
+                        "height": monitor.height,
+                        "x": monitor.x,
+                        "y": monitor.y,
+                    }
+                else:
+                    print(f"Warning: Monitor '{name}' not found in DISPLAY_NAMES mapping")
         except Exception as e:
             print(f"Error detecting monitors: {e}")
 
