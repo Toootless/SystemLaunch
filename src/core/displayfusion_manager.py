@@ -39,6 +39,34 @@ class DisplayFusionManager:
         5: {"layout": "split-left-right-groups", "sections": 2, "cols": 2, "rows": 1},
     }
 
+    # Maps location_id strings to (col, row) grid coordinates per monitor.
+    # This is the authoritative source for window placement — the position
+    # field in profiles.txt is only a launch-order sequence number.
+    LOCATION_GRID = {
+        1: {
+            "left":  (0, 0),
+            "right": (1, 0),
+        },
+        2: {
+            "top-left":      (0, 0),
+            "top-center":    (1, 0),
+            "top-right":     (2, 0),
+            "bottom-left":   (0, 1),
+            "bottom-center": (1, 1),
+            "bottom-right":  (2, 1),
+        },
+        3: {
+            "center": (0, 0),
+        },
+        4: {
+            "center": (0, 0),
+        },
+        5: {
+            "left":  (0, 0),
+            "right": (1, 0),
+        },
+    }
+
     # Display name mapping
     DISPLAY_NAMES = {
         1: "DISPLAY6",
@@ -128,25 +156,34 @@ class DisplayFusionManager:
     def get_field_bounds(self, monitor: int, field_index: int, location_id: str = None) -> Tuple[int, int, int, int]:
         """
         Calculate window bounds for a specific field on a monitor.
-        
+
+        Uses location_id to determine which grid cell to place the window in.
+        field_index is kept for API compatibility but is only used as a fallback
+        when location_id is absent or unrecognised.
+
         Args:
             monitor: Monitor number
-            field_index: 0-based field index
-            location_id: Optional location identifier (top-left, center, etc.)
-        
+            field_index: 0-based fallback index (used only when location_id unknown)
+            location_id: Location identifier (e.g. 'left', 'top-center', 'center')
+
         Returns: (x, y, width, height)
         """
         if monitor not in self.monitor_info:
             return (0, 0, 800, 600)
 
-        layout = self.MONITOR_LAYOUTS.get(monitor, {"fields": 1, "cols": 1, "rows": 1})
+        layout = self.MONITOR_LAYOUTS.get(monitor, {"cols": 1, "rows": 1})
         mon_info = self.monitor_info[monitor]
 
         cols = layout["cols"]
         rows = layout["rows"]
 
-        col = field_index % cols
-        row = field_index // cols
+        # Resolve (col, row) from location_id first; fall back to field_index.
+        grid = self.LOCATION_GRID.get(monitor, {})
+        if location_id and location_id in grid:
+            col, row = grid[location_id]
+        else:
+            col = field_index % cols
+            row = field_index // cols
 
         x = mon_info["x"] + (col * mon_info["width"]) // cols
         y = mon_info["y"] + (row * mon_info["height"]) // rows
